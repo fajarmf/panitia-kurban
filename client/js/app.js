@@ -1,0 +1,203 @@
+// ===== API Helper & Auth Utilities =====
+const API_BASE = '/api';
+
+function getToken() {
+  return localStorage.getItem('token');
+}
+
+function getUser() {
+  const u = localStorage.getItem('user');
+  return u ? JSON.parse(u) : null;
+}
+
+function setAuth(token, user) {
+  localStorage.setItem('token', token);
+  localStorage.setItem('user', JSON.stringify(user));
+}
+
+function clearAuth() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+}
+
+function requireAuth() {
+  if (!getToken()) {
+    window.location.href = '/';
+    return false;
+  }
+  return true;
+}
+
+function hasRole(...roles) {
+  const user = getUser();
+  return user && roles.includes(user.role);
+}
+
+async function api(endpoint, options = {}) {
+  const token = getToken();
+  const headers = { ...options.headers };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+    if (res.status === 401) {
+      clearAuth();
+      window.location.href = '/';
+      return null;
+    }
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/pdf')) {
+      if (!res.ok) throw new Error('PDF generation failed');
+      return res.blob();
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || 'Request failed');
+    }
+    return data;
+  } catch (err) {
+    throw err;
+  }
+}
+
+// ===== Toast =====
+function showToast(message, type = 'success') {
+  let container = document.querySelector('.toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// ===== Sidebar Navigation =====
+function initSidebar(activePage) {
+  const user = getUser();
+  if (!user) return;
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', href: '/dashboard.html', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4', roles: ['SUPER_ADMIN', 'KETUA_PANITIA', 'PANITIA_VOUCHER', 'PANITIA_SCANNER'] },
+    { id: 'events', label: 'Event', href: '/events.html', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z', roles: ['SUPER_ADMIN', 'KETUA_PANITIA'] },
+    { id: 'pengkurban', label: 'Pengkurban', href: '/pengkurban.html', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z', roles: ['SUPER_ADMIN', 'KETUA_PANITIA', 'PANITIA_VOUCHER'] },
+    { id: 'vouchers', label: 'Voucher', href: '/vouchers.html', icon: 'M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z', roles: ['SUPER_ADMIN', 'KETUA_PANITIA', 'PANITIA_VOUCHER'] },
+    { id: 'scanner', label: 'Scanner QR', href: '/scanner.html', icon: 'M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z', roles: ['SUPER_ADMIN', 'KETUA_PANITIA', 'PANITIA_SCANNER'] },
+    { id: 'users', label: 'Kelola User', href: '/users.html', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m9 5.197V21', roles: ['SUPER_ADMIN'] },
+  ];
+
+  // Desktop sidebar
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) {
+    const nav = sidebar.querySelector('.sidebar-nav');
+    nav.innerHTML = navItems
+      .filter(item => item.roles.includes(user.role))
+      .map(item => `
+        <a href="${item.href}" class="${activePage === item.id ? 'active' : ''}" id="nav-${item.id}">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}"/></svg>
+          ${item.label}
+        </a>
+      `).join('');
+
+    // Logout
+    nav.innerHTML += `
+      <a href="#" onclick="logout()" style="margin-top: auto; color: #fca5a5;">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Logout
+      </a>
+    `;
+  }
+
+  // Mobile bottom nav
+  const bottomNav = document.getElementById('bottom-nav');
+  if (bottomNav) {
+    const items = bottomNav.querySelector('.bottom-nav-items');
+    const mobileItems = navItems
+      .filter(item => item.roles.includes(user.role))
+      .slice(0, 5); // Max 5 items for bottom nav
+    items.innerHTML = mobileItems
+      .map(item => `
+        <a href="${item.href}" class="bottom-nav-item ${activePage === item.id ? 'active' : ''}">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}"/></svg>
+          ${item.label}
+        </a>
+      `).join('');
+  }
+
+  // User info in top bar
+  const userInfo = document.getElementById('user-info');
+  if (userInfo) {
+    const initials = user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    const roleLabels = {
+      'SUPER_ADMIN': 'Super Admin',
+      'KETUA_PANITIA': 'Ketua Panitia',
+      'PANITIA_VOUCHER': 'Panitia Voucher',
+      'PANITIA_SCANNER': 'Panitia Scanner'
+    };
+    userInfo.innerHTML = `
+      <div>
+        <div class="user-name">${user.fullName}</div>
+        <div class="user-role">${roleLabels[user.role] || user.role}</div>
+      </div>
+      <div class="user-avatar">${initials}</div>
+    `;
+  }
+}
+
+function logout() {
+  clearAuth();
+  window.location.href = '/';
+}
+
+// ===== Mobile sidebar toggle =====
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('mobile-open');
+}
+
+// ===== Format date =====
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  // Handle date-only strings (YYYY-MM-DD) from PostgreSQL
+  const str = String(dateStr);
+  const d = str.length === 10 ? new Date(str + 'T12:00:00') : new Date(str);
+  if (isNaN(d.getTime())) return '-';
+  return d.toLocaleDateString('id-ID', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  });
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('id-ID', {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+// ===== Confirm dialog =====
+function confirmAction(message) {
+  return confirm(message);
+}
+
+// ===== Event selector helper =====
+async function loadEventOptions(selectId, includeAll = false) {
+  try {
+    const events = await api('/events');
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = includeAll ? '<option value="">Semua Event</option>' : '<option value="">Pilih Event</option>';
+    events.forEach(e => {
+      select.innerHTML += `<option value="${e.id}" ${e.isActive ? 'selected' : ''}>${e.name} (${e.year})</option>`;
+    });
+    return events;
+  } catch (err) {
+    console.error('Failed to load events:', err);
+  }
+}

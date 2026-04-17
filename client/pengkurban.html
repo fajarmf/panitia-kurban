@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengkurban - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <h2>Data Pengkurban</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row justify-between gap-3 mb-4">
+      <select id="event-filter" class="input-field" style="max-width:280px" onchange="loadData()"></select>
+      <button class="btn-primary" onclick="openModal()">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Tambah Pengkurban
+      </button>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr><th>Nama</th><th>Jenis Hewan</th><th>Tipe Akad</th><th>Telepon</th><th>Catatan</th><th>Aksi</th></tr></thead>
+          <tbody id="data-table"><tr><td colspan="6" class="text-center py-8"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div class="modal-overlay" id="pk-modal">
+    <div class="modal-content">
+      <div class="modal-header"><h3 id="modal-title">Tambah Pengkurban</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+      <form onsubmit="saveData(event)">
+        <input type="hidden" id="edit-id">
+        <div class="form-group"><label>Event</label><select id="form-event" class="input-field" required></select></div>
+        <div class="form-group"><label>Nama Pengkurban</label><input type="text" id="form-name" class="input-field" required placeholder="Nama lengkap"></div>
+        <div class="form-group"><label>Jenis Hewan</label>
+          <select id="form-animal" class="input-field" required>
+            <option value="SAPI">Sapi</option><option value="KAMBING">Kambing</option><option value="DOMBA">Domba</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Tipe Akad</label>
+          <select id="form-purchase" class="input-field" required>
+            <option value="BELI_MASJID">Beli via Masjid</option><option value="BAWA_SENDIRI">Bawa Sendiri</option>
+          </select>
+        </div>
+        <div class="form-group"><label>No. Telepon</label><input type="tel" id="form-phone" class="input-field" placeholder="08xxxxxxxxxx"></div>
+        <div class="form-group"><label>Catatan</label><textarea id="form-notes" class="input-field" rows="2" placeholder="Catatan (opsional)"></textarea></div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" class="btn-secondary flex-1" onclick="closeModal()">Batal</button>
+          <button type="submit" class="btn-primary flex-1">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    initSidebar('pengkurban');
+    const animalLabels = { SAPI: 'Sapi 🐄', KAMBING: 'Kambing 🐐', DOMBA: 'Domba 🐑' };
+    const purchaseLabels = { BELI_MASJID: 'Beli via Masjid', BAWA_SENDIRI: 'Bawa Sendiri' };
+
+    loadEventOptions('event-filter', true).then(() => loadData());
+    loadEventOptions('form-event');
+
+    async function loadData() {
+      const eventId = document.getElementById('event-filter').value;
+      const params = eventId ? `?eventId=${eventId}` : '';
+      try {
+        const data = await api(`/pengkurban${params}`);
+        const tbody = document.getElementById('data-table');
+        if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>'; return; }
+        tbody.innerHTML = data.map(d => `<tr>
+          <td class="font-semibold">${d.name}</td>
+          <td>${animalLabels[d.animalType] || d.animalType}</td>
+          <td><span class="badge ${d.purchaseType === 'BELI_MASJID' ? 'badge-active' : 'badge-claimed'}">${purchaseLabels[d.purchaseType]}</span></td>
+          <td>${d.phone || '-'}</td>
+          <td class="text-xs text-emerald-300/50">${d.notes || '-'}</td>
+          <td><div class="flex gap-2">
+            <button class="btn-secondary btn-sm" onclick='editData(${JSON.stringify(d)})'>Edit</button>
+            <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
+          </div></td>
+        </tr>`).join('');
+      } catch (err) { showToast('Gagal memuat data', 'error'); }
+    }
+
+    function openModal() {
+      document.getElementById('modal-title').textContent = 'Tambah Pengkurban';
+      document.getElementById('edit-id').value = '';
+      document.getElementById('form-name').value = '';
+      document.getElementById('form-animal').value = 'SAPI';
+      document.getElementById('form-purchase').value = 'BELI_MASJID';
+      document.getElementById('form-phone').value = '';
+      document.getElementById('form-notes').value = '';
+      document.getElementById('pk-modal').classList.add('active');
+    }
+    function editData(d) {
+      document.getElementById('modal-title').textContent = 'Edit Pengkurban';
+      document.getElementById('edit-id').value = d.id;
+      document.getElementById('form-event').value = d.eventId;
+      document.getElementById('form-name').value = d.name;
+      document.getElementById('form-animal').value = d.animalType;
+      document.getElementById('form-purchase').value = d.purchaseType;
+      document.getElementById('form-phone').value = d.phone || '';
+      document.getElementById('form-notes').value = d.notes || '';
+      document.getElementById('pk-modal').classList.add('active');
+    }
+    function closeModal() { document.getElementById('pk-modal').classList.remove('active'); }
+
+    async function saveData(ev) {
+      ev.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const data = { eventId: document.getElementById('form-event').value, name: document.getElementById('form-name').value, animalType: document.getElementById('form-animal').value, purchaseType: document.getElementById('form-purchase').value, phone: document.getElementById('form-phone').value, notes: document.getElementById('form-notes').value };
+      try {
+        if (id) { await api(`/pengkurban/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); showToast('Data diupdate'); }
+        else { await api('/pengkurban', { method: 'POST', body: JSON.stringify(data) }); showToast('Data ditambahkan'); }
+        closeModal(); loadData();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+    async function deleteData(id) {
+      if (!confirmAction('Yakin ingin menghapus data ini?')) return;
+      try { await api(`/pengkurban/${id}`, { method: 'DELETE' }); showToast('Data dihapus'); loadData(); }
+      catch (err) { showToast(err.message, 'error'); }
+    }
+  </script>
+</body>
+</html>

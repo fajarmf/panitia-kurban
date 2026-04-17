@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <h1>🕌 Al Hijrah CGE</h1>
+      <p>Sistem Panitia Kurban</p>
+    </div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+
+  <!-- Bottom Nav Mobile -->
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <!-- Main -->
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h2>Dashboard</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <!-- Event selector -->
+    <div class="mb-6">
+      <select id="event-select" class="input-field" style="max-width: 300px;" onchange="loadStats()"></select>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number" id="stat-total">-</div>
+        <div class="stat-label">Total Voucher</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-claimed" style="background: linear-gradient(135deg, #93c5fd, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
+        <div class="stat-label">Sudah Diklaim</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-active">-</div>
+        <div class="stat-label">Belum Diklaim</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-pengkurban" style="background: linear-gradient(135deg, #c4b5fd, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
+        <div class="stat-label">Pengkurban</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="glass-card p-6 mb-6">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-semibold text-emerald-200">Progress Distribusi</h3>
+        <span class="text-sm text-emerald-300/60" id="progress-text">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Recent scans -->
+    <div class="glass-card p-6">
+      <h3 class="font-semibold text-emerald-200 mb-4">Aktivitas Scan Terbaru</h3>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Kode Voucher</th>
+              <th>Diklaim Oleh</th>
+              <th>Waktu</th>
+            </tr>
+          </thead>
+          <tbody id="recent-scans">
+            <tr><td colspan="3" class="text-center py-8 text-emerald-300/40">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    initSidebar('dashboard');
+
+    loadEventOptions('event-select', true).then(() => loadStats());
+
+    async function loadStats() {
+      try {
+        const eventId = document.getElementById('event-select').value;
+        const params = eventId ? `?eventId=${eventId}` : '';
+        const stats = await api(`/dashboard/stats${params}`);
+
+        document.getElementById('stat-total').textContent = stats.totalVouchers;
+        document.getElementById('stat-claimed').textContent = stats.claimedVouchers;
+        document.getElementById('stat-active').textContent = stats.activeVouchers;
+        document.getElementById('stat-pengkurban').textContent = stats.totalPengkurban;
+        document.getElementById('progress-text').textContent = stats.claimPercentage + '%';
+        document.getElementById('progress-fill').style.width = stats.claimPercentage + '%';
+
+        const tbody = document.getElementById('recent-scans');
+        if (stats.recentScans && stats.recentScans.length > 0) {
+          tbody.innerHTML = stats.recentScans.map(s => `
+            <tr>
+              <td><span class="font-mono text-emerald-300">${s.voucherCode}</span></td>
+              <td>${s.claimedBy?.fullName || '-'}</td>
+              <td>${formatDateTime(s.claimedAt)}</td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-emerald-300/40">Belum ada aktivitas scan</td></tr>';
+        }
+      } catch (err) {
+        showToast('Gagal memuat data dashboard', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

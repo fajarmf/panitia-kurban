@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kelola User - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <h2>Kelola User</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <div class="flex justify-end mb-4">
+      <button class="btn-primary" onclick="openModal()">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Tambah User
+      </button>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr><th>Username</th><th>Nama Lengkap</th><th>Role</th><th>Status</th><th>Aksi</th></tr>
+          </thead>
+          <tbody id="users-table">
+            <tr><td colspan="5" class="text-center py-8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Tambah User</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <form onsubmit="saveUser(event)">
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="form-username" class="input-field" placeholder="Username" required minlength="3">
+        </div>
+        <div class="form-group">
+          <label>Password <span id="pw-hint" class="text-xs text-emerald-300/40"></span></label>
+          <input type="password" id="form-password" class="input-field" placeholder="Min 6 karakter" minlength="6">
+        </div>
+        <div class="form-group">
+          <label>Nama Lengkap</label>
+          <input type="text" id="form-fullname" class="input-field" placeholder="Nama lengkap" required>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="form-role" class="input-field" required>
+            <option value="SUPER_ADMIN">Super Admin</option>
+            <option value="KETUA_PANITIA">Ketua Panitia</option>
+            <option value="PANITIA_VOUCHER">Panitia Voucher</option>
+            <option value="PANITIA_SCANNER">Panitia Scanner</option>
+          </select>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" class="btn-secondary flex-1" onclick="closeModal()">Batal</button>
+          <button type="submit" class="btn-primary flex-1">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth() || !hasRole('SUPER_ADMIN')) { window.location.href = '/dashboard.html'; }
+    initSidebar('users');
+
+    const roleLabels = { SUPER_ADMIN: 'Super Admin', KETUA_PANITIA: 'Ketua Panitia', PANITIA_VOUCHER: 'Panitia Voucher', PANITIA_SCANNER: 'Panitia Scanner' };
+
+    loadUsers();
+
+    async function loadUsers() {
+      try {
+        const users = await api('/users');
+        const tbody = document.getElementById('users-table');
+        if (!users.length) {
+          tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-emerald-300/40">Belum ada user</td></tr>';
+          return;
+        }
+        tbody.innerHTML = users.map(u => `
+          <tr>
+            <td><span class="font-mono">${u.username}</span></td>
+            <td>${u.fullName}</td>
+            <td><span class="badge badge-role">${roleLabels[u.role] || u.role}</span></td>
+            <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-cancelled'}">${u.isActive ? 'Aktif' : 'Nonaktif'}</span></td>
+            <td>
+              <div class="flex gap-2">
+                <button class="btn-secondary btn-sm" onclick='editUser(${JSON.stringify(u)})'>Edit</button>
+                ${u.isActive ? `<button class="btn-danger btn-sm" onclick="deactivateUser('${u.id}')">Nonaktifkan</button>` : ''}
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        showToast('Gagal memuat data user', 'error');
+      }
+    }
+
+    function openModal() {
+      document.getElementById('modal-title').textContent = 'Tambah User';
+      document.getElementById('edit-id').value = '';
+      document.getElementById('form-username').value = '';
+      document.getElementById('form-password').value = '';
+      document.getElementById('form-fullname').value = '';
+      document.getElementById('form-role').value = 'PANITIA_SCANNER';
+      document.getElementById('form-password').required = true;
+      document.getElementById('pw-hint').textContent = '';
+      document.getElementById('user-modal').classList.add('active');
+    }
+
+    function editUser(u) {
+      document.getElementById('modal-title').textContent = 'Edit User';
+      document.getElementById('edit-id').value = u.id;
+      document.getElementById('form-username').value = u.username;
+      document.getElementById('form-password').value = '';
+      document.getElementById('form-fullname').value = u.fullName;
+      document.getElementById('form-role').value = u.role;
+      document.getElementById('form-password').required = false;
+      document.getElementById('pw-hint').textContent = '(kosongkan jika tidak ingin mengubah)';
+      document.getElementById('user-modal').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('user-modal').classList.remove('active');
+    }
+
+    async function saveUser(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const data = {
+        username: document.getElementById('form-username').value,
+        fullName: document.getElementById('form-fullname').value,
+        role: document.getElementById('form-role').value,
+      };
+      const pw = document.getElementById('form-password').value;
+      if (pw) data.password = pw;
+
+      try {
+        if (id) {
+          await api(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+          showToast('User berhasil diupdate');
+        } else {
+          if (!pw) { showToast('Password wajib diisi', 'error'); return; }
+          data.password = pw;
+          await api('/users', { method: 'POST', body: JSON.stringify(data) });
+          showToast('User berhasil ditambahkan');
+        }
+        closeModal();
+        loadUsers();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function deactivateUser(id) {
+      if (!confirmAction('Yakin ingin menonaktifkan user ini?')) return;
+      try {
+        await api(`/users/${id}`, { method: 'DELETE' });
+        showToast('User berhasil dinonaktifkan');
+        loadUsers();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

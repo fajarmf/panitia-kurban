@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <h2>Kelola Event</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <div class="flex justify-end mb-4">
+      <button class="btn-primary" onclick="openModal()">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        Tambah Event
+      </button>
+    </div>
+
+    <div id="events-list" class="grid gap-4">
+      <div class="text-center py-12"><div class="spinner"></div></div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="event-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Tambah Event</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <form onsubmit="saveEvent(event)">
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+          <label>Nama Event</label>
+          <input type="text" id="form-name" class="input-field" placeholder="contoh: Idul Adha 1447H" required>
+        </div>
+        <div class="form-group">
+          <label>Tahun</label>
+          <input type="text" id="form-year" class="input-field" placeholder="contoh: 2026 atau 1447H" required>
+        </div>
+        <div class="form-group">
+          <label>Tanggal Event</label>
+          <input type="date" id="form-date" class="input-field">
+        </div>
+        <div class="form-group">
+          <label>Deskripsi</label>
+          <textarea id="form-desc" class="input-field" rows="3" placeholder="Deskripsi event (opsional)"></textarea>
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" class="btn-secondary flex-1" onclick="closeModal()">Batal</button>
+          <button type="submit" class="btn-primary flex-1">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    initSidebar('events');
+    loadEvents();
+
+    async function loadEvents() {
+      try {
+        const events = await api('/events');
+        const container = document.getElementById('events-list');
+        if (!events.length) {
+          container.innerHTML = '<div class="empty-state"><p>Belum ada event. Klik + untuk membuat.</p></div>';
+          return;
+        }
+        container.innerHTML = events.map(e => `
+          <div class="glass-card p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                ${e.logoPath
+                  ? `<img src="${e.logoPath}" class="w-16 h-16 rounded-xl object-cover border border-white/10" alt="Logo">`
+                  : `<div class="w-16 h-16 rounded-xl bg-emerald-800/50 flex items-center justify-center border border-white/10"><svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>`}
+                <div>
+                  <h3 class="font-bold text-lg text-emerald-100">${e.name}</h3>
+                  <p class="text-sm text-emerald-300/60">Tahun: ${e.year} ${e.eventDate ? '• ' + formatDate(e.eventDate) : ''}</p>
+                  ${e.description ? `<p class="text-xs text-emerald-300/40 mt-1">${e.description}</p>` : ''}
+                </div>
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <span class="badge ${e.isActive ? 'badge-active' : 'badge-cancelled'}">${e.isActive ? 'Aktif' : 'Nonaktif'}</span>
+                <label><input type="file" class="hidden" accept="image/*" onchange="uploadLogo('${e.id}', this.files[0])"><span class="btn-secondary btn-sm cursor-pointer">📷 Logo</span></label>
+                <button class="btn-secondary btn-sm" onclick='editEvent(${JSON.stringify(e)})'>Edit</button>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) { showToast('Gagal memuat event', 'error'); }
+    }
+
+    function openModal() {
+      document.getElementById('modal-title').textContent = 'Tambah Event';
+      document.getElementById('edit-id').value = '';
+      document.getElementById('form-name').value = '';
+      document.getElementById('form-year').value = new Date().getFullYear().toString();
+      document.getElementById('form-date').value = '';
+      document.getElementById('form-desc').value = '';
+      document.getElementById('event-modal').classList.add('active');
+    }
+    function editEvent(e) {
+      document.getElementById('modal-title').textContent = 'Edit Event';
+      document.getElementById('edit-id').value = e.id;
+      document.getElementById('form-name').value = e.name;
+      document.getElementById('form-year').value = e.year;
+      document.getElementById('form-date').value = e.eventDate ? e.eventDate.split('T')[0] : '';
+      document.getElementById('form-desc').value = e.description || '';
+      document.getElementById('event-modal').classList.add('active');
+    }
+    function closeModal() { document.getElementById('event-modal').classList.remove('active'); }
+
+    async function saveEvent(ev) {
+      ev.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const data = { name: document.getElementById('form-name').value, year: document.getElementById('form-year').value, eventDate: document.getElementById('form-date').value || null, description: document.getElementById('form-desc').value || null };
+      try {
+        if (id) { await api(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); showToast('Event diupdate'); }
+        else { await api('/events', { method: 'POST', body: JSON.stringify(data) }); showToast('Event ditambahkan'); }
+        closeModal(); loadEvents();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function uploadLogo(eventId, file) {
+      if (!file) return;
+      const fd = new FormData(); fd.append('logo', file);
+      try { await api(`/events/${eventId}/logo`, { method: 'POST', body: fd }); showToast('Logo diupload'); loadEvents(); }
+      catch (err) { showToast(err.message, 'error'); }
+    }
+  </script>
+</body>
+</html>

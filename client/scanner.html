@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanner QR - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <h2>Scanner QR</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <div class="max-w-lg mx-auto">
+      <!-- Scanner -->
+      <div class="glass-card p-6 mb-4" id="scanner-section">
+        <h3 class="text-center font-semibold text-emerald-200 mb-4">Arahkan kamera ke QR Code voucher</h3>
+        <div class="scanner-container mb-4">
+          <div id="qr-reader" style="width:100%"></div>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <button class="btn-primary" id="start-btn" onclick="startScanner()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Mulai Scan
+          </button>
+          <button class="btn-secondary" id="stop-btn" onclick="stopScanner()" style="display:none">Stop</button>
+        </div>
+        <!-- Manual input -->
+        <div class="mt-4 pt-4 border-t border-white/10">
+          <p class="text-xs text-emerald-300/40 text-center mb-2">Atau masukkan kode manual:</p>
+          <div class="flex gap-2">
+            <input type="text" id="manual-code" class="input-field" placeholder="QRB-2026-0001">
+            <button class="btn-primary" onclick="manualScan()">Klaim</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="glass-card p-6 mb-4" id="result-section" style="display:none">
+        <div class="scan-result" id="scan-result"></div>
+        <button class="btn-primary w-full mt-4" onclick="resetScanner()">Scan Lagi</button>
+      </div>
+
+      <!-- Recent scans -->
+      <div class="glass-card p-4">
+        <h3 class="font-semibold text-emerald-200 mb-3 text-sm">Riwayat Scan</h3>
+        <div id="scan-history" class="space-y-2"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    initSidebar('scanner');
+
+    let html5QrCode = null;
+    let isScanning = false;
+    const scanHistory = [];
+
+    function startScanner() {
+      if (isScanning) return;
+      html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        onScanSuccess,
+        () => {}
+      ).then(() => {
+        isScanning = true;
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('stop-btn').style.display = 'inline-flex';
+      }).catch(err => {
+        showToast('Tidak dapat mengakses kamera: ' + err, 'error');
+      });
+    }
+
+    function stopScanner() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => {
+          isScanning = false;
+          document.getElementById('start-btn').style.display = 'inline-flex';
+          document.getElementById('stop-btn').style.display = 'none';
+        });
+      }
+    }
+
+    async function onScanSuccess(decodedText) {
+      stopScanner();
+      let voucherCode = decodedText;
+      try {
+        const parsed = JSON.parse(decodedText);
+        if (parsed.code) voucherCode = parsed.code;
+      } catch (e) { /* not JSON, use raw text */ }
+      await claimVoucher(voucherCode);
+    }
+
+    async function manualScan() {
+      const code = document.getElementById('manual-code').value.trim();
+      if (!code) { showToast('Masukkan kode voucher', 'error'); return; }
+      await claimVoucher(code);
+    }
+
+    async function claimVoucher(code) {
+      document.getElementById('scanner-section').style.display = 'none';
+      document.getElementById('result-section').style.display = 'block';
+      const resultDiv = document.getElementById('scan-result');
+      resultDiv.innerHTML = '<div class="spinner"></div><p class="mt-4 text-emerald-300/60">Memproses voucher...</p>';
+
+      try {
+        const result = await api('/vouchers/scan', {
+          method: 'POST',
+          body: JSON.stringify({ voucherCode: code })
+        });
+        resultDiv.innerHTML = `
+          <div class="scan-success-icon">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <h3 class="text-xl font-bold text-emerald-200 mb-2">Berhasil! ✅</h3>
+          <p class="text-emerald-300/60 mb-4">${result.message}</p>
+          <div class="glass-card p-4 text-left">
+            <div class="flex justify-between py-1"><span class="text-emerald-300/50">Kode:</span><span class="font-mono font-bold">${result.voucher.voucherCode}</span></div>
+            <div class="flex justify-between py-1"><span class="text-emerald-300/50">Status:</span><span class="badge badge-claimed">DIKLAIM</span></div>
+          </div>
+        `;
+        addToHistory(code, true, result.message);
+        showToast('Voucher berhasil diklaim! ✅');
+      } catch (err) {
+        resultDiv.innerHTML = `
+          <div class="scan-error-icon">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+          </div>
+          <h3 class="text-xl font-bold text-red-300 mb-2">Gagal ❌</h3>
+          <p class="text-red-300/80">${err.message}</p>
+          <p class="text-sm text-emerald-300/40 mt-2">Kode: ${code}</p>
+        `;
+        addToHistory(code, false, err.message);
+        showToast(err.message, 'error');
+      }
+    }
+
+    function resetScanner() {
+      document.getElementById('scanner-section').style.display = 'block';
+      document.getElementById('result-section').style.display = 'none';
+      document.getElementById('manual-code').value = '';
+    }
+
+    function addToHistory(code, success, message) {
+      scanHistory.unshift({ code, success, message, time: new Date() });
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const container = document.getElementById('scan-history');
+      if (!scanHistory.length) {
+        container.innerHTML = '<p class="text-xs text-emerald-300/30 text-center">Belum ada riwayat scan</p>';
+        return;
+      }
+      container.innerHTML = scanHistory.slice(0, 10).map(h => `
+        <div class="flex items-center justify-between p-2 rounded-lg ${h.success ? 'bg-emerald-900/30' : 'bg-red-900/20'}">
+          <div>
+            <span class="font-mono text-sm ${h.success ? 'text-emerald-300' : 'text-red-300'}">${h.code}</span>
+            <span class="text-xs text-emerald-300/30 ml-2">${h.time.toLocaleTimeString('id-ID')}</span>
+          </div>
+          <span class="text-xs ${h.success ? 'text-emerald-400' : 'text-red-400'}">${h.success ? '✅' : '❌'}</span>
+        </div>
+      `).join('');
+    }
+    renderHistory();
+  </script>
+</body>
+</html>
