@@ -1,98 +1,131 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🐄 Panitia Kurban — Masjid Al Hijrah CGE
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Aplikasi full-stack untuk manajemen panitia kurban. Generate voucher QR, scan via kamera HP, dan kelola distribusi daging kurban.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tech Stack
 
-## Description
+| Layer | Teknologi |
+|-------|-----------|
+| Backend | NestJS (TypeScript) |
+| Database | PostgreSQL 16 (Docker) |
+| ORM | TypeORM (auto-sync) |
+| Auth | JWT + Passport |
+| Frontend | HTML + Tailwind CSS v3 + Vanilla JS |
+| QR/PDF | `qrcode` + `pdfkit` + `html5-qrcode` |
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Prerequisites
 
-## Project setup
+- **Node.js** 18+
+- **Docker** (untuk PostgreSQL)
+
+## Cara Menjalankan
 
 ```bash
-$ npm install
+# 1. Install dependencies
+npm install
+
+# 2. Start database PostgreSQL
+docker-compose up -d
+
+# 3. Jalankan development server (watch mode)
+npm run start:dev
+
+# 4. Buka di browser
+open http://localhost:3000
 ```
 
-## Compile and run the project
+> Saat pertama kali jalan, otomatis membuat akun Super Admin.
+
+### Default Login
+
+| Username | Password | Role |
+|----------|----------|------|
+| `admin` | `admin123` | Super Admin |
+
+## Build & Production
 
 ```bash
-# development
-$ npm run start
+# Compile TypeScript → JavaScript
+npm run build
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Jalankan production build
+npm run start:prod
 ```
 
-## Run tests
+## Scripts Lainnya
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start          # Start tanpa watch
+npm run start:debug    # Debug mode + watch
+npm run lint           # ESLint fix
+npm run format         # Prettier format
+npm run test           # Unit tests
+npm run test:e2e       # End-to-end tests
+npm run test:cov       # Test coverage
 ```
 
-## Deployment
+## Environment Variables
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Buat file `.env` di root project:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=admin
+DB_PASSWORD=admin123
+DB_NAME=panitia_kurban
+JWT_SECRET=panitia-kurban-secret-key-2026
+JWT_EXPIRES_IN=7d
+PORT=3000
+UPLOAD_DIR=./uploads
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## Struktur Direktori
 
-## Resources
+```
+panitia-kurban/
+├── client/                  # Frontend (served via @nestjs/serve-static)
+│   ├── css/style.css        # Glassmorphism theme
+│   ├── js/app.js            # Shared utilities (API, auth, nav)
+│   ├── index.html           # Login page
+│   ├── dashboard.html       # Dashboard + statistik
+│   ├── users.html           # Manajemen user (Super Admin)
+│   ├── events.html          # Manajemen event + upload logo
+│   ├── pengkurban.html      # Data pengkurban
+│   ├── vouchers.html        # Voucher CRUD + PDF download
+│   └── scanner.html         # QR Scanner (kamera HP)
+├── src/                     # Backend NestJS
+│   ├── auth/                # JWT + Role guard
+│   ├── users/               # CRUD users
+│   ├── events/              # CRUD events + logo upload
+│   ├── pengkurban/          # CRUD pengkurban
+│   ├── vouchers/            # Voucher + QR + PDF + scan
+│   ├── dashboard/           # Statistik
+│   └── seed/                # Auto-seed Super Admin
+├── uploads/                 # File uploads (logo, dll)
+├── docker-compose.yml       # PostgreSQL container
+└── .env                     # Konfigurasi environment
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Role & Permission
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Role | Voucher | Scan | User | Pengkurban | Event | Dashboard |
+|------|:---:|:---:|:---:|:---:|:---:|:---:|
+| Super Admin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Ketua Panitia | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
+| Panitia Voucher | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ |
+| Panitia Scanner | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
 
-## Support
+## Fitur Utama
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- **Manajemen Event** — Buat event kurban, upload logo masjid
+- **Data Pengkurban** — Input nama, jenis hewan (sapi/kambing/domba), tipe akad
+- **Generate Voucher QR** — PDF dengan logo, QR code, nomor unik, tanggal
+- **Batch Voucher** — Buat hingga 500 voucher sekaligus (kode sequential: `QRB-2026-0001`)
+- **Scan QR** — Klaim voucher via kamera HP, dengan fallback input manual
+- **Dashboard** — Statistik distribusi real-time
+- **Audit Log** — Riwayat scan tercatat otomatis
 
-## Stay in touch
+## Dokumentasi Lengkap
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Lihat [docs/implementation_plan.md](docs/implementation_plan.md) untuk detail arsitektur, database schema, API endpoints, dan langkah implementasi.
