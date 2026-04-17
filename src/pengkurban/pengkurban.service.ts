@@ -21,6 +21,23 @@ export class PengkurbanService {
     });
   }
 
+  async exportCsv(eventId?: string): Promise<string> {
+    const data = await this.findAll(eventId);
+    const header = ['Nama', 'Jenis Hewan', 'Tipe Akad', 'Telepon', 'Catatan', 'Event', 'Tahun'].join(',');
+    const rows = data.map(d => {
+      return [
+        d.name,
+        d.animalType,
+        d.purchaseType,
+        d.phone || '',
+        d.notes || '',
+        d.event?.name || '',
+        d.event?.year || '',
+      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+    });
+    return [header, ...rows].join('\n');
+  }
+
   async findById(id: string): Promise<Pengkurban> {
     const pk = await this.pengkurbanRepository.findOne({
       where: { id },

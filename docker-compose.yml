@@ -1,18 +1,47 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: panitia-kurban-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: panitia_kurban
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
+  app:
+    build: .
     ports:
-      - '5432:5432'
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=admin
+      - DB_PASSWORD=adminpassword
+      - DB_NAME=panitia_kurban
+      - JWT_SECRET=supersecretjwtkey_ubah_di_production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - kurban_net
+    volumes:
+      - uploads_data:/app/client/uploads
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=adminpassword
+      - POSTGRES_DB=panitia_kurban
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d panitia_kurban"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - kurban_net
+
+networks:
+  kurban_net:
 
 volumes:
   pgdata:
+  uploads_data:

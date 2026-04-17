@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,6 +27,15 @@ export class PengkurbanController {
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
   findAll(@Query('eventId') eventId?: string) {
     return this.pengkurbanService.findAll(eventId);
+  }
+
+  @Get('export')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  async exportCsv(@Query('eventId') eventId: string | undefined, @Res() res: Response) {
+    const csv = await this.pengkurbanService.exportCsv(eventId);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('pengkurban.csv');
+    return res.send(csv);
   }
 
   @Get(':id')

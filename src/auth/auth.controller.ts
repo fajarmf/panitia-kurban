@@ -11,6 +11,16 @@ export class AuthController {
     return this.authService.login(body.username, body.password);
   }
 
+  @Post('forgot-password')
+  forgotPassword(@Body() body: { username: string }) {
+    return this.authService.forgotPassword(body.username);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() body: { token: string; password: string }) {
+    return this.authService.resetPassword(body.token, body.password);
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Get('profile')
   getProfile(@Request() req: any) {

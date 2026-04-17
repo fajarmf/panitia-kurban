@@ -110,7 +110,8 @@
             <td>
               <div class="flex gap-2">
                 <button class="btn-secondary btn-sm" onclick='editUser(${JSON.stringify(u)})'>Edit</button>
-                ${u.isActive ? `<button class="btn-danger btn-sm" onclick="deactivateUser('${u.id}')">Nonaktifkan</button>` : ''}
+                ${u.isActive ? `<button class="btn-secondary btn-sm" onclick="deactivateUser('${u.id}')">Nonaktifkan</button>` : `<button class="btn-primary btn-sm" onclick="enableUser('${u.id}')">Aktifkan</button>`}
+                <button class="btn-danger btn-sm" onclick="hardDeleteUser('${u.id}')">Hapus</button>
               </div>
             </td>
           </tr>
@@ -185,6 +186,24 @@
       } catch (err) {
         showToast(err.message, 'error');
       }
+    }
+
+    async function enableUser(id) {
+      if (!confirmAction('Yakin ingin mengaktifkan user ini?')) return;
+      try {
+        await api(`/users/${id}/enable`, { method: 'PATCH' });
+        showToast('User berhasil diaktifkan');
+        loadUsers();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function hardDeleteUser(id) {
+      if (!confirmAction('PERINGATAN: Yakin ingin menghapus permanen user ini? Data yang terhubung mungkin akan mencegah penghapusan.')) return;
+      try {
+        await api(`/users/${id}/hard`, { method: 'DELETE' });
+        showToast('User berhasil dihapus permanen');
+        loadUsers();
+      } catch (err) { showToast(err.message, 'error'); }
     }
   </script>
 </body>

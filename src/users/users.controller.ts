@@ -43,4 +43,16 @@ export class UsersController {
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }
+
+  @Patch(':id/enable')
+  @Roles(Role.SUPER_ADMIN)
+  enable(@Param('id') id: string) {
+    return this.usersService.enable(id);
+  }
+
+  @Delete(':id/hard')
+  @Roles(Role.SUPER_ADMIN)
+  hardRemove(@Param('id') id: string) {
+    return this.usersService.hardRemove(id);
+  }
 }

@@ -27,10 +27,13 @@
 
     <div class="flex flex-col sm:flex-row justify-between gap-3 mb-4">
       <select id="event-filter" class="input-field" style="max-width:280px" onchange="loadData()"></select>
-      <button class="btn-primary" onclick="openModal()">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-        Tambah Pengkurban
-      </button>
+      <div class="flex gap-2">
+        <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
+        <button class="btn-primary" onclick="openModal()">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+          Tambah Pengkurban
+        </button>
+      </div>
     </div>
 
     <div class="glass-card p-4">
@@ -99,6 +102,23 @@
           </div></td>
         </tr>`).join('');
       } catch (err) { showToast('Gagal memuat data', 'error'); }
+    }
+
+    async function exportCsv() {
+      const eventId = document.getElementById('event-filter').value;
+      const params = eventId ? `?eventId=${eventId}` : '';
+      try {
+        const token = getToken();
+        const res = await fetch(`/api/pengkurban/export${params}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Gagal export CSV');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `pengkurban-export.csv`; a.click();
+        URL.revokeObjectURL(url);
+        showToast('Berhasil export CSV');
+      } catch (err) { showToast(err.message, 'error'); }
     }
 
     function openModal() {

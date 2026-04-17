@@ -36,6 +36,7 @@
       </select>
       <input type="text" id="search-input" class="input-field" style="max-width:220px" placeholder="🔍 Cari kode voucher..." oninput="debounceSearch()">
       <div class="flex gap-2 ml-auto">
+        <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
         <button class="btn-secondary" onclick="openBatchModal()">📦 Batch</button>
         <button class="btn-primary" onclick="openCreateModal()">+ Buat Voucher</button>
       </div>
@@ -128,6 +129,27 @@
           </div></td>
         </tr>`).join('');
       } catch (err) { showToast('Gagal memuat voucher', 'error'); }
+    }
+
+    async function exportCsv() {
+      const eventId = document.getElementById('event-filter').value;
+      const status = document.getElementById('status-filter').value;
+      let params = [];
+      if (eventId) params.push(`eventId=${eventId}`);
+      if (status) params.push(`status=${status}`);
+      const qs = params.length ? '?' + params.join('&') : '';
+      try {
+        const token = getToken();
+        const res = await fetch(`/api/vouchers/export${qs}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Gagal export CSV');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `vouchers-export.csv`; a.click();
+        URL.revokeObjectURL(url);
+        showToast('Berhasil export CSV');
+      } catch (err) { showToast(err.message, 'error'); }
     }
 
     function openCreateModal() { document.getElementById('create-modal').classList.add('active'); }

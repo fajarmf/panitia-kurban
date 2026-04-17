@@ -10,6 +10,7 @@ import { Voucher } from './voucher.entity';
 import { ScanLog } from './scan-log.entity';
 import { Event } from '../events/event.entity';
 import { VoucherStatus } from '../common/enums/voucher-status.enum';
+import { VouchersGateway } from './vouchers.gateway';
 
 @Injectable()
 export class VouchersService {
@@ -20,6 +21,7 @@ export class VouchersService {
     private scanLogsRepository: Repository<ScanLog>,
     @InjectRepository(Event)
     private eventsRepository: Repository<Event>,
+    private vouchersGateway: VouchersGateway,
   ) {}
 
   private generateVoucherCode(year: string, index: number): string {
@@ -55,6 +57,24 @@ export class VouchersService {
       }
       return v;
     });
+  }
+
+  async exportCsv(eventId?: string, status?: string): Promise<string> {
+    const vouchers = await this.findAll(eventId, status);
+    const header = ['Kode Voucher', 'Event', 'Tahun', 'Status', 'Tgl Distribusi', 'Dibuat Oleh', 'Diklaim Oleh', 'Tgl Klaim'].join(',');
+    const rows = vouchers.map(v => {
+      return [
+        v.voucherCode,
+        v.event?.name || '',
+        v.event?.year || '',
+        v.status,
+        v.distributionDate ? new Date(v.distributionDate).toISOString().split('T')[0] : '',
+        v.createdBy?.fullName || '',
+        v.claimedBy?.fullName || '',
+        v.claimedAt ? new Date(v.claimedAt).toISOString() : '',
+      ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+    });
+    return [header, ...rows].join('\n');
   }
 
   async findById(id: string): Promise<Voucher> {
@@ -158,6 +178,9 @@ export class VouchersService {
       action: 'CLAIMED',
       notes: 'Voucher berhasil diklaim',
     });
+
+    // Notify connected clients (Dashboard)
+    this.vouchersGateway.notifyVoucherClaimed({ voucherCode });
 
     return { voucher: saved, message: 'Voucher berhasil diklaim!' };
   }
@@ -293,16 +316,86 @@ export class VouchersService {
       throw new NotFoundException('Tidak ada voucher aktif untuk event ini');
     }
 
-    // Generate individual PDFs and combine
-    const pdfs: Buffer[] = [];
-    for (const v of vouchers) {
-      const pdf = await this.generatePdf(v.id);
-      pdfs.push(pdf);
-    }
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 20, bottom: 20, left: 20, right: 20 },
+      });
 
-    // For simplicity, return the first one if batch
-    // In production, you'd use pdf-lib to merge
-    return pdfs[0];
+      const buffers: Buffer[] = [];
+      doc.on('data', (chunk: Buffer) => buffers.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
+
+      const itemsPerPage = 5;
+      const voucherHeight = 150;
+      const voucherMargin = 10;
+      const startX = 20;
+      const width = 555;
+
+      vouchers.forEach((voucher, index) => {
+        if (index > 0 && index % itemsPerPage === 0) {
+          doc.addPage();
+        }
+
+        const positionInPage = index % itemsPerPage;
+        const startY = 20 + (positionInPage * (voucherHeight + voucherMargin));
+
+        // Background & Border
+        doc.rect(startX, startY, width, voucherHeight).fillAndStroke('#f0fdf4', '#059669');
+        doc.rect(startX + 5, startY + 5, width - 10, voucherHeight - 10).lineWidth(0.5).stroke('#059669');
+
+        // Logo
+        let logoOffset = 0;
+        if (voucher.event?.logoPath) {
+          const logoFile = path.join(process.cwd(), voucher.event.logoPath.replace('/api/uploads/', 'uploads/'));
+          if (fs.existsSync(logoFile)) {
+            try {
+              doc.image(logoFile, startX + 20, startY + 40, { width: 70, height: 70 });
+              logoOffset = 100;
+            } catch (e) {
+              // Skip logo
+            }
+          }
+        }
+
+        // Mosque name & Title
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#065f46')
+           .text('MASJID AL HIJRAH CGE', startX + 30 + logoOffset, startY + 30, { width: 300, align: 'left' });
+        
+        doc.moveTo(startX + 30 + logoOffset, startY + 48).lineTo(startX + 300 + logoOffset, startY + 48).lineWidth(1).stroke('#059669');
+        
+        doc.font('Helvetica-Bold').fontSize(12).fillColor('#047857')
+           .text(`KUPON PENGAMBILAN DAGING KURBAN ${voucher.event?.year || ''}`, startX + 30 + logoOffset, startY + 55, { width: 300, align: 'left' });
+
+        doc.font('Helvetica-Bold').fontSize(16).fillColor('#065f46')
+           .text(voucher.voucherCode, startX + 30 + logoOffset, startY + 85, { width: 300, align: 'left' });
+
+        if (voucher.distributionDate) {
+          const dateStr = new Date(voucher.distributionDate).toLocaleDateString('id-ID', {
+            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+          });
+          doc.font('Helvetica').fontSize(10).fillColor('#047857')
+             .text(`Tanggal: ${dateStr}`, startX + 30 + logoOffset, startY + 110, { width: 300, align: 'left' });
+        }
+
+        // QR Code
+        if (voucher.qrData) {
+          try {
+            const qrBuffer = Buffer.from(voucher.qrData.split(',')[1], 'base64');
+            doc.image(qrBuffer, startX + width - 130, startY + 25, { width: 100, height: 100 });
+          } catch (e) {
+            doc.fontSize(10).text('QR Error', startX + width - 130, startY + 70);
+          }
+        }
+
+        // Footer decorative text
+        doc.font('Helvetica').fontSize(8).fillColor('#6b7280')
+           .text('Tunjukkan kupon ini kepada panitia untuk pengambilan daging', startX + width - 150, startY + 130, { width: 140, align: 'center' });
+      });
+
+      doc.end();
+    });
   }
 
   async remove(id: string): Promise<void> {

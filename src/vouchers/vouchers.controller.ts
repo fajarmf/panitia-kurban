@@ -31,6 +31,19 @@ export class VouchersController {
     return this.vouchersService.findAll(eventId, status, search);
   }
 
+  @Get('export')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  async exportCsv(
+    @Query('eventId') eventId: string | undefined,
+    @Query('status') status: string | undefined,
+    @Res() res: Response,
+  ) {
+    const csv = await this.vouchersService.exportCsv(eventId, status);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('vouchers.csv');
+    return res.send(csv);
+  }
+
   @Get('stats')
   stats(@Query('eventId') eventId?: string) {
     return this.vouchersService.stats(eventId);

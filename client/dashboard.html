@@ -92,6 +92,7 @@
   </main>
 
   <script src="/js/app.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script>
     if (!requireAuth()) throw new Error('Not authenticated');
     initSidebar('dashboard');
@@ -100,8 +101,10 @@
 
     async function loadStats() {
       try {
-        const eventId = document.getElementById('event-select').value;
-        const params = eventId ? `?eventId=${eventId}` : '';
+        const select = document.getElementById('event-select');
+        const eventId = select.value;
+        const isAll = eventId === '' && select.options.length > 0;
+        const params = isAll ? '?eventId=all' : (eventId ? `?eventId=${eventId}` : '');
         const stats = await api(`/dashboard/stats${params}`);
 
         document.getElementById('stat-total').textContent = stats.totalVouchers;
@@ -127,6 +130,13 @@
         showToast('Gagal memuat data dashboard', 'error');
       }
     }
+
+    // Connect WebSocket for real-time updates
+    const socket = io();
+    socket.on('voucher_claimed', (data) => {
+      showToast(`Voucher ${data.voucherCode} baru saja diklaim!`, 'success');
+      loadStats();
+    });
   </script>
 </body>
 </html>

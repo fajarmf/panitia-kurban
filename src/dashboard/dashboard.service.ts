@@ -21,9 +21,10 @@ export class DashboardService {
   ) {}
 
   async getStats(eventId?: string) {
-    // Get active event if no eventId provided
     let activeEvent: Event | null = null;
-    if (!eventId) {
+    if (eventId === 'all') {
+      eventId = undefined;
+    } else if (!eventId) {
       activeEvent = await this.eventsRepo.findOne({
         where: { isActive: true },
         order: { createdAt: 'DESC' },
@@ -57,15 +58,23 @@ export class DashboardService {
     let totalPengkurban = 0;
     if (eventId) {
       totalPengkurban = await this.pengkurbanRepo.count({ where: { eventId } });
+    } else {
+      totalPengkurban = await this.pengkurbanRepo.count();
     }
 
     const totalEvents = await this.eventsRepo.count();
 
     // Recent scan activity
-    const recentScans = await this.vouchersRepo
+    const recentScansQb = this.vouchersRepo
       .createQueryBuilder('v')
       .leftJoinAndSelect('v.claimedBy', 'claimer')
-      .where('v.status = :status', { status: VoucherStatus.CLAIMED })
+      .where('v.status = :status', { status: VoucherStatus.CLAIMED });
+
+    if (eventId) {
+      recentScansQb.andWhere('v.event_id = :eventId', { eventId });
+    }
+
+    const recentScans = await recentScansQb
       .orderBy('v.claimed_at', 'DESC')
       .take(10)
       .getMany();

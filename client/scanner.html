@@ -7,6 +7,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link rel="manifest" href="/manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js');
+      });
+    }
+  </script>
 </head>
 <body>
   <div class="bg-orb bg-orb-1"></div>
@@ -120,6 +128,24 @@
       document.getElementById('scanner-section').style.display = 'none';
       document.getElementById('result-section').style.display = 'block';
       const resultDiv = document.getElementById('scan-result');
+
+      if (!navigator.onLine) {
+        saveOfflineScan(code);
+        resultDiv.innerHTML = `
+          <div class="scan-success-icon" style="background-color: #ca8a04;">
+            <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="text-xl font-bold text-yellow-300 mb-2">Tersimpan Offline 📡</h3>
+          <p class="text-yellow-300/60 mb-4">Anda sedang offline. Voucher disimpan dan otomatis disinkronkan saat koneksi kembali.</p>
+          <div class="glass-card p-4 text-left">
+            <div class="flex justify-between py-1"><span class="text-emerald-300/50">Kode:</span><span class="font-mono font-bold">${code}</span></div>
+          </div>
+        `;
+        addToHistory(code, true, 'Offline Mode');
+        showToast('Scan tersimpan offline. Menunggu koneksi...', 'success');
+        return;
+      }
+
       resultDiv.innerHTML = '<div class="spinner"></div><p class="mt-4 text-emerald-300/60">Memproses voucher...</p>';
 
       try {
@@ -164,6 +190,34 @@
       scanHistory.unshift({ code, success, message, time: new Date() });
       renderHistory();
     }
+
+    function saveOfflineScan(code) {
+      let queue = JSON.parse(localStorage.getItem('offlineScans') || '[]');
+      if (!queue.includes(code)) {
+        queue.push(code);
+        localStorage.setItem('offlineScans', JSON.stringify(queue));
+      }
+    }
+
+    async function syncOfflineScans() {
+      let queue = JSON.parse(localStorage.getItem('offlineScans') || '[]');
+      if (!queue.length) return;
+      showToast(`Menyinkronkan ${queue.length} data offline...`);
+      
+      for (const code of queue) {
+        try {
+          await api('/vouchers/scan', { method: 'POST', body: JSON.stringify({ voucherCode: code }) });
+          addToHistory(code, true, 'Sinkronisasi berhasil');
+        } catch (err) {
+          addToHistory(code, false, `Sync: ${err.message}`);
+        }
+      }
+      localStorage.removeItem('offlineScans');
+      showToast('Sinkronisasi offline selesai!');
+    }
+
+    window.addEventListener('online', syncOfflineScans);
+    if (navigator.onLine) setTimeout(syncOfflineScans, 1000);
 
     function renderHistory() {
       const container = document.getElementById('scan-history');

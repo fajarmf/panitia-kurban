@@ -27,6 +27,19 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { username } });
   }
 
+  async findByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { resetToken: token } });
+  }
+
+  async updateResetToken(id: string, token: string | null, expires: Date | null) {
+    const user = await this.findById(id);
+    if (user) {
+      user.resetToken = token as any;
+      user.resetTokenExpires = expires as any;
+      await this.usersRepository.save(user);
+    }
+  }
+
   async create(dto: CreateUserDto): Promise<User> {
     const existing = await this.findByUsername(dto.username);
     if (existing) {
@@ -63,6 +76,23 @@ export class UsersService {
     }
     user.isActive = false;
     await this.usersRepository.save(user);
+  }
+
+  async enable(id: string): Promise<void> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User tidak ditemukan');
+    user.isActive = true;
+    await this.usersRepository.save(user);
+  }
+
+  async hardRemove(id: string): Promise<void> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User tidak ditemukan');
+    try {
+      await this.usersRepository.remove(user);
+    } catch (error) {
+      throw new ConflictException('User tidak dapat dihapus karena masih terkait dengan data lain (misal: riwayat scan/voucher).');
+    }
   }
 
   async count(): Promise<number> {
