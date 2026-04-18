@@ -37,7 +37,7 @@
       <input type="text" id="search-input" class="input-field" style="max-width:220px" placeholder="🔍 Cari kode voucher..." oninput="debounceSearch()">
       <div class="flex gap-2 ml-auto">
         <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
-        <button class="btn-secondary" onclick="downloadBatchPdf()">📄 Batch PDF</button>
+        <button class="btn-secondary" onclick="downloadBatchPdf()">📄 Download Seluruh Kupon</button>
         <button class="btn-secondary" onclick="openBatchModal()">📦 Batch</button>
         <button class="btn-primary" onclick="openCreateModal()">+ Buat Voucher</button>
       </div>
@@ -125,7 +125,6 @@
           <td><span class="badge badge-${v.status.toLowerCase()}">${v.status === 'ACTIVE' ? 'Aktif' : v.status === 'CLAIMED' ? 'Diklaim' : 'Batal'}</span></td>
           <td class="hide-mobile text-xs text-emerald-300/50">${formatDateTime(v.createdAt)}</td>
           <td><div class="flex gap-1 flex-wrap">
-            <button class="btn-secondary btn-sm" onclick="downloadPdf('${v.id}','${v.voucherCode}')">📄 PDF</button>
             ${v.status === 'ACTIVE' ? `<button class="btn-danger btn-sm" onclick="deleteVoucher('${v.id}')">🗑</button>` : ''}
           </div></td>
         </tr>`).join('');
@@ -200,15 +199,7 @@
       btn.disabled = false; btn.textContent = 'Buat Batch';
     }
 
-    async function downloadPdf(id, code) {
-      try {
-        const blob = await api(`/vouchers/${id}/pdf`);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `voucher-${code}.pdf`; a.click();
-        URL.revokeObjectURL(url);
-        showToast('PDF didownload');
-      } catch (err) { showToast('Gagal download PDF', 'error'); }
-    }
+
 
     async function deleteVoucher(id) {
       if (!confirmAction('Yakin ingin menghapus voucher ini?')) return;

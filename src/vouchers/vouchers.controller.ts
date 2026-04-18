@@ -76,16 +76,7 @@ export class VouchersController {
     return this.vouchersService.findById(id);
   }
 
-  @Get(':id/pdf')
-  async downloadPdf(@Param('id') id: string, @Res() res: Response) {
-    const buffer = await this.vouchersService.generatePdf(id);
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=voucher-${id}.pdf`,
-      'Content-Length': buffer.length,
-    });
-    res.end(buffer);
-  }
+
 
   @Post()
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
