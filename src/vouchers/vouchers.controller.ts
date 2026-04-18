@@ -9,6 +9,7 @@ import {
   Res,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -66,6 +67,21 @@ export class VouchersController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=voucher-${id}.pdf`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
+  @Get('batch-pdf')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  async downloadBatchPdf(@Query('eventId') eventId: string, @Res() res: Response) {
+    if (!eventId) {
+      throw new BadRequestException('eventId is required');
+    }
+    const buffer = await this.vouchersService.generateBatchPdf(eventId);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=vouchers-batch-${eventId}.pdf`,
       'Content-Length': buffer.length,
     });
     res.end(buffer);

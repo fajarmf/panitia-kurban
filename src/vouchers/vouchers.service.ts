@@ -24,10 +24,7 @@ export class VouchersService {
     private vouchersGateway: VouchersGateway,
   ) {}
 
-  private generateVoucherCode(year: string, index: number): string {
-    const paddedIndex = String(index).padStart(4, '0');
-    return `QRB-${year}-${paddedIndex}`;
-  }
+
 
   async findAll(eventId?: string, status?: string, search?: string): Promise<Voucher[]> {
     const qb = this.vouchersRepository
@@ -99,20 +96,7 @@ export class VouchersService {
     const event = await this.eventsRepository.findOne({ where: { id: eventId } });
     if (!event) throw new NotFoundException('Event tidak ditemukan');
 
-    // Get the next voucher number
-    const lastVoucher = await this.vouchersRepository
-      .createQueryBuilder('v')
-      .where('v.event_id = :eventId', { eventId })
-      .orderBy('v.created_at', 'DESC')
-      .getOne();
-
-    let nextIndex = 1;
-    if (lastVoucher) {
-      const parts = lastVoucher.voucherCode.split('-');
-      nextIndex = parseInt(parts[2], 10) + 1;
-    }
-
-    const voucherCode = this.generateVoucherCode(event.year, nextIndex);
+    const voucherCode = await this.generateUniqueCode(distributionDate ? new Date(distributionDate) : new Date());
     const qrData = JSON.stringify({ code: voucherCode, eventId, year: event.year });
     const qrDataUrl = await QRCode.toDataURL(qrData, { width: 300, margin: 1 });
 
@@ -328,7 +312,7 @@ export class VouchersService {
       doc.on('error', reject);
 
       const itemsPerPage = 5;
-      const voucherHeight = 150;
+      const voucherHeight = 155;
       const voucherMargin = 10;
       const startX = 20;
       const width = 555;
@@ -339,63 +323,112 @@ export class VouchersService {
         }
 
         const positionInPage = index % itemsPerPage;
-        const startY = 20 + (positionInPage * (voucherHeight + voucherMargin));
+        const startY = 15 + (positionInPage * (voucherHeight + voucherMargin));
 
-        // Background & Border
-        doc.rect(startX, startY, width, voucherHeight).fillAndStroke('#f0fdf4', '#059669');
-        doc.rect(startX + 5, startY + 5, width - 10, voucherHeight - 10).lineWidth(0.5).stroke('#059669');
-
-        // Logo
-        let logoOffset = 0;
-        if (voucher.event?.logoPath) {
-          const logoFile = path.join(process.cwd(), voucher.event.logoPath.replace('/api/uploads/', 'uploads/'));
-          if (fs.existsSync(logoFile)) {
-            try {
-              doc.image(logoFile, startX + 20, startY + 40, { width: 70, height: 70 });
-              logoOffset = 100;
-            } catch (e) {
-              // Skip logo
-            }
-          }
-        }
-
-        // Mosque name & Title
-        doc.font('Helvetica-Bold').fontSize(14).fillColor('#065f46')
-           .text('MASJID AL HIJRAH CGE', startX + 30 + logoOffset, startY + 30, { width: 300, align: 'left' });
+        // Card Background & Border
+        doc.roundedRect(startX, startY, width, voucherHeight, 8).fillAndStroke('#ffffff', '#e5e7eb');
         
-        doc.moveTo(startX + 30 + logoOffset, startY + 48).lineTo(startX + 300 + logoOffset, startY + 48).lineWidth(1).stroke('#059669');
-        
-        doc.font('Helvetica-Bold').fontSize(12).fillColor('#047857')
-           .text(`KUPON PENGAMBILAN DAGING KURBAN ${voucher.event?.year || ''}`, startX + 30 + logoOffset, startY + 55, { width: 300, align: 'left' });
+        // Top Split Border
+        doc.save();
+        doc.roundedRect(startX, startY, width, voucherHeight, 8).clip();
+        doc.rect(startX, startY, width / 2, 5).fill('#10b981'); // Emerald
+        doc.rect(startX + width / 2, startY, width / 2, 5).fill('#3b82f6'); // Blue
+        doc.restore();
 
-        doc.font('Helvetica-Bold').fontSize(16).fillColor('#065f46')
-           .text(voucher.voucherCode, startX + 30 + logoOffset, startY + 85, { width: 300, align: 'left' });
+        // Left Icon Box
+        doc.roundedRect(startX + 20, startY + 20, 45, 45, 10).fillAndStroke('#ecfdf5', '#d1fae5');
+        doc.save();
+        doc.translate(startX + 30, startY + 30);
+        doc.scale(1.2);
+        doc.path('M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z').fill('#10b981');
+        doc.restore();
 
+        // Year Pill
+        let yearText = voucher.event?.year || '';
         if (voucher.distributionDate) {
-          const dateStr = new Date(voucher.distributionDate).toLocaleDateString('id-ID', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-          });
-          doc.font('Helvetica').fontSize(10).fillColor('#047857')
-             .text(`Tanggal: ${dateStr}`, startX + 30 + logoOffset, startY + 110, { width: 300, align: 'left' });
+           const hijriFormatter = new Intl.DateTimeFormat('id-ID-u-ca-islamic', { year: 'numeric' });
+           const hijriParts = hijriFormatter.format(new Date(voucher.distributionDate)).split(' ');
+           const hijri = hijriParts[0] + ' H';
+           const masehi = new Date(voucher.distributionDate).getFullYear() + ' M';
+           yearText = `Idul Adha ${hijri} / ${masehi}`;
+        } else {
+           yearText = `Idul Adha ${yearText}`;
         }
+        
+        doc.roundedRect(startX + 80, startY + 20, 160, 18, 9).fill('#ecfdf5');
+        doc.font('Helvetica-Bold').fontSize(8).fillColor('#10b981')
+           .text(yearText, startX + 80, startY + 25, { width: 160, align: 'center' });
 
-        // QR Code
+        // Titles
+        doc.font('Helvetica-Bold').fontSize(18).fillColor('#1a432e')
+           .text('KUPON DAGING KURBAN', startX + 80, startY + 45);
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#6b7280')
+           .text('Masjid Al Hijrah CGE', startX + 80, startY + 65);
+
+        // Details Section
+        doc.font('Helvetica-Bold').fontSize(8).fillColor('#6b7280')
+           .text('#  ID KUPON', startX + 20, startY + 95);
+        doc.roundedRect(startX + 20, startY + 110, 170, 25, 4).fillAndStroke('#f9fafb', '#e5e7eb');
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#10b981')
+           .text(voucher.voucherCode, startX + 20, startY + 118, { width: 170, align: 'center' });
+
+        doc.font('Helvetica-Bold').fontSize(8).fillColor('#6b7280')
+           .text('TANGGAL', startX + 210, startY + 95);
+        doc.roundedRect(startX + 210, startY + 110, 170, 25, 4).fillAndStroke('#f9fafb', '#e5e7eb');
+        const dateStr = voucher.distributionDate ? new Date(voucher.distributionDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111827')
+           .text(dateStr, startX + 210, startY + 118, { width: 170, align: 'center' });
+
+        // Dotted Line
+        doc.moveTo(startX + 400, startY + 15)
+           .lineTo(startX + 400, startY + 140)
+           .lineWidth(1).dash(2, {space: 3}).stroke('#d1d5db');
+        doc.undash();
+
+        // QR Box
+        doc.roundedRect(startX + 420, startY + 15, 115, 110, 8).fill('#ecfdf5');
         if (voucher.qrData) {
           try {
             const qrBuffer = Buffer.from(voucher.qrData.split(',')[1], 'base64');
-            doc.image(qrBuffer, startX + width - 130, startY + 25, { width: 100, height: 100 });
-          } catch (e) {
-            doc.fontSize(10).text('QR Error', startX + width - 130, startY + 70);
-          }
+            doc.image(qrBuffer, startX + 432, startY + 22, { width: 90, height: 90 });
+          } catch(e) {}
         }
+        doc.font('Helvetica-Bold').fontSize(6).fillColor('#10b981')
+           .text('SCAN UNTUK VERIFIKASI', startX + 420, startY + 130, { width: 115, align: 'center' })
+           .text('OLEH PANITIA', startX + 420, startY + 138, { width: 115, align: 'center' });
 
-        // Footer decorative text
-        doc.font('Helvetica').fontSize(8).fillColor('#6b7280')
-           .text('Tunjukkan kupon ini kepada panitia untuk pengambilan daging', startX + width - 150, startY + 130, { width: 140, align: 'center' });
+        // Footer info text
+        doc.circle(startX + 25, startY + 143, 5).lineWidth(1).stroke('#9ca3af');
+        doc.font('Helvetica-Bold').fontSize(7).fillColor('#9ca3af').text('i', startX + 23, startY + 140, { width: 4, align: 'center' });
+        doc.font('Helvetica').fontSize(7).fillColor('#6b7280')
+           .text('Tunjukkan kupon ini saat pengambilan. Hanya panitia yang boleh memindai.', startX + 35, startY + 140);
       });
 
       doc.end();
     });
+  }
+
+  private async generateUniqueCode(distributionDate: Date): Promise<string> {
+    const hijriFormatter = new Intl.DateTimeFormat('en-US-u-ca-islamic', { year: 'numeric' });
+    const hijriYearRaw = hijriFormatter.format(distributionDate);
+    const hijriYear = hijriYearRaw.split(' ')[0];
+
+    const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    let isUnique = false;
+
+    while (!isUnique) {
+      let randomPart = '';
+      for (let i = 0; i < 10; i++) {
+        randomPart += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      code = `QRB-${hijriYear}H-${randomPart}`;
+      const existing = await this.vouchersRepository.findOne({ where: { voucherCode: code } });
+      if (!existing) {
+        isUnique = true;
+      }
+    }
+    return code;
   }
 
   async remove(id: string): Promise<void> {
@@ -436,7 +469,7 @@ export class VouchersService {
       .createQueryBuilder('sl')
       .leftJoinAndSelect('sl.voucher', 'voucher')
       .leftJoinAndSelect('sl.scannedBy', 'scanner')
-      .orderBy('sl.scanned_at', 'DESC')
+      .orderBy('sl.scannedAt', 'DESC')
       .take(50);
 
     if (eventId) {

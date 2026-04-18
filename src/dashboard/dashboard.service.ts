@@ -75,7 +75,7 @@ export class DashboardService {
     }
 
     const recentScans = await recentScansQb
-      .orderBy('v.claimed_at', 'DESC')
+      .orderBy('v.claimedAt', 'DESC')
       .take(10)
       .getMany();
 

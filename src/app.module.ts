@@ -27,7 +27,7 @@ import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'client'),
-      exclude: ['/api/(.*)'],
+      exclude: ['/api/:path*'],
     }),
     AuthModule,
     UsersModule,

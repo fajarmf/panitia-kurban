@@ -41,6 +41,9 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto): Promise<User> {
+    if (dto.role === 'SUPER_ADMIN' as any) {
+      throw new ConflictException('Tidak dapat membuat Super Admin baru. Hanya ada 1 Super Admin di sistem.');
+    }
     const existing = await this.findByUsername(dto.username);
     if (existing) {
       throw new ConflictException('Username sudah digunakan');
@@ -74,6 +77,9 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User tidak ditemukan');
     }
+    if (user.role === 'SUPER_ADMIN' as any) {
+      throw new ConflictException('Super Admin tidak dapat dinonaktifkan.');
+    }
     user.isActive = false;
     await this.usersRepository.save(user);
   }
@@ -88,6 +94,9 @@ export class UsersService {
   async hardRemove(id: string): Promise<void> {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User tidak ditemukan');
+    if (user.role === 'SUPER_ADMIN' as any) {
+      throw new ConflictException('Super Admin tidak dapat dihapus.');
+    }
     try {
       await this.usersRepository.remove(user);
     } catch (error) {

@@ -127,7 +127,8 @@
           tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-emerald-300/40">Belum ada aktivitas scan</td></tr>';
         }
       } catch (err) {
-        showToast('Gagal memuat data dashboard', 'error');
+        console.error(err);
+        showToast('Gagal memuat data dashboard: ' + (err.message || 'Error internal'), 'error');
       }
     }
 

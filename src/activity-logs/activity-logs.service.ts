@@ -18,4 +18,12 @@ export class ActivityLogsService {
       console.error('Failed to save activity log:', err);
     }
   }
+
+  async findAll(limit: number = 50) {
+    return this.activityLogsRepository.find({
+      order: { createdAt: 'DESC' },
+      take: limit,
+      relations: ['user'],
+    });
+  }
 }

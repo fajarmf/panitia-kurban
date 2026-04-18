@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log Aktivitas - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <h2>Log Aktivitas</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-emerald-100">Riwayat Perubahan Data</h3>
+        <button class="btn-secondary btn-sm" onclick="loadLogs()">🔄 Refresh</button>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>Detail Tambahan</th></tr></thead>
+          <tbody id="logs-table"><tr><td colspan="4" class="text-center py-8"><div class="spinner"></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    initSidebar('activity-logs');
+
+    async function loadLogs() {
+      try {
+        const logs = await api('/activity-logs?limit=100');
+        const tbody = document.getElementById('logs-table');
+        if (!logs.length) { tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-emerald-300/40">Tidak ada log aktivitas</td></tr>'; return; }
+        
+        tbody.innerHTML = logs.map(log => `<tr>
+          <td class="text-xs text-emerald-300/60">${formatDateTime(log.createdAt)}</td>
+          <td><span class="font-bold text-emerald-200">${log.user ? log.user.username : 'Sistem'}</span></td>
+          <td><span class="badge badge-active">${log.action}</span></td>
+          <td class="text-xs text-emerald-300/80 font-mono" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${(log.details || '').replace(/"/g, '&quot;')}">${log.details || '-'}</td>
+        </tr>`).join('');
+      } catch (err) { showToast('Gagal memuat log aktivitas', 'error'); }
+    }
+
+    loadLogs();
+  </script>
+</body>
+</html>
