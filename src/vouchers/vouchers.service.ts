@@ -221,36 +221,53 @@ export class VouchersService {
         const slot = i % ITEMS_PER_PAGE;
         const y = PAGE_PADDING_TOP + slot * (CARD_H + CARD_GAP);
 
+        // ═══════════════════════════════════════════════════
+        // Layout constants relative to card
+        // ═══════════════════════════════════════════════════
+        const SEP_X = CARD_X + 388;             // Dotted separator x
+        const L = CARD_X + 18;                  // Left content margin
+        const R_X = SEP_X + 14;                 // Right panel content start
+        const R_W = CARD_X + CARD_W - R_X - 10; // Right panel content width
+
         // ─── Card Background ───
         doc.save();
         doc.roundedRect(CARD_X, y, CARD_W, CARD_H, 6).fillAndStroke('#ffffff', '#e5e7eb');
         doc.restore();
 
-        // ─── Top color bar (clipped inside card) ───
+        // ─── Top color bar (clipped inside rounded rect) ───
         doc.save();
         doc.roundedRect(CARD_X, y, CARD_W, CARD_H, 6).clip();
-        doc.rect(CARD_X, y, CARD_W / 2, 4).fill('#10b981');
-        doc.rect(CARD_X + CARD_W / 2, y, CARD_W / 2, 4).fill('#3b82f6');
+        doc.rect(CARD_X, y, CARD_W * 0.6, 4).fill('#10b981');
+        doc.rect(CARD_X + CARD_W * 0.6, y, CARD_W * 0.4, 4).fill('#3b82f6');
         doc.restore();
 
-        // ─── Logo / Fallback ───
+        // ─── Left green accent bar ───
+        doc.save();
+        doc.roundedRect(CARD_X, y, CARD_W, CARD_H, 6).clip();
+        doc.rect(CARD_X, y + 4, 4, CARD_H - 4).fill('#10b981');
+        doc.restore();
+
+        // ─── Logo / Fallback (vertically centered in upper half) ───
+        const LOGO_SIZE = 46;
+        const LOGO_X = L;
+        const LOGO_Y = y + 14;
         let hasLogo = false;
         if (voucher.event?.logoPath) {
           const logoFile = path.join(process.cwd(), voucher.event.logoPath.replace('/api/uploads/', 'uploads/'));
           if (fs.existsSync(logoFile)) {
             try {
-              doc.image(logoFile, CARD_X + 15, y + 18, { width: 38, height: 38 });
+              doc.image(logoFile, LOGO_X + 2, LOGO_Y + 2, { width: LOGO_SIZE - 4, height: LOGO_SIZE - 4 });
               hasLogo = true;
             } catch (e) { /* skip */ }
           }
         }
         if (!hasLogo) {
-          doc.roundedRect(CARD_X + 12, y + 15, 44, 44, 8).fillAndStroke('#ecfdf5', '#d1fae5');
-          doc.font('Helvetica-Bold').fontSize(13).fillColor('#10b981');
-          t('CGE', CARD_X + 12, y + 30, { width: 44, align: 'center' });
+          doc.roundedRect(LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE, 10).fillAndStroke('#ecfdf5', '#d1fae5');
+          doc.font('Helvetica-Bold').fontSize(14).fillColor('#10b981');
+          t('CGE', LOGO_X, LOGO_Y + 15, { width: LOGO_SIZE, align: 'center' });
         }
 
-        // ─── Year Pill ───
+        // ─── Year Pill (to the right of logo) ───
         let yearText = '';
         if (voucher.distributionDate) {
           try {
@@ -263,56 +280,73 @@ export class VouchersService {
         } else {
           yearText = `Idul Adha ${voucher.event?.year || ''}`;
         }
-        doc.roundedRect(CARD_X + 70, y + 16, 155, 16, 8).fill('#ecfdf5');
-        doc.font('Helvetica-Bold').fontSize(7).fillColor('#10b981');
-        t(yearText, CARD_X + 70, y + 20, { width: 155, align: 'center' });
+        const PILL_X = LOGO_X + LOGO_SIZE + 12;
+        doc.roundedRect(PILL_X, y + 14, 170, 18, 9).fill('#ecfdf5');
+        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#10b981');
+        t(yearText, PILL_X, y + 19, { width: 170, align: 'center' });
 
-        // ─── Title ───
-        doc.font('Helvetica-Bold').fontSize(16).fillColor('#1a432e');
-        t('KUPON DAGING KURBAN', CARD_X + 70, y + 38);
-        doc.font('Helvetica-Bold').fontSize(9).fillColor('#6b7280');
-        t('Masjid Al Hijrah CGE', CARD_X + 70, y + 56);
+        // ─── Title (below pill, aligned with pill) ───
+        doc.font('Helvetica-Bold').fontSize(17).fillColor('#1a432e');
+        t('KUPON DAGING KURBAN', PILL_X, y + 38);
+        doc.font('Helvetica').fontSize(9).fillColor('#6b7280');
+        t('Masjid Al Hijrah CGE', PILL_X, y + 57);
 
-        // ─── ID KUPON box ───
-        doc.font('Helvetica-Bold').fontSize(7).fillColor('#6b7280');
-        t('#  ID KUPON', CARD_X + 15, y + 78);
-        doc.roundedRect(CARD_X + 15, y + 90, 165, 22, 4).fillAndStroke('#f9fafb', '#e5e7eb');
-        doc.font('Helvetica-Bold').fontSize(10).fillColor('#10b981');
-        t(voucher.voucherCode, CARD_X + 15, y + 96, { width: 165, align: 'center' });
+        // ─── ID KUPON section ───
+        const BOX_Y_LABEL = y + 76;
+        const BOX_Y = y + 88;
+        const BOX_H = 30;
+        const BOX1_W = 178;
+        const BOX2_X = L + BOX1_W + 14;
+        const BOX2_W = 178;
 
-        // ─── TANGGAL box ───
-        doc.font('Helvetica-Bold').fontSize(7).fillColor('#6b7280');
-        t('TANGGAL', CARD_X + 200, y + 78);
-        doc.roundedRect(CARD_X + 200, y + 90, 165, 22, 4).fillAndStroke('#f9fafb', '#e5e7eb');
+        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#6b7280');
+        t('#  ID KUPON', L, BOX_Y_LABEL);
+        doc.roundedRect(L, BOX_Y, BOX1_W, BOX_H, 5).fillAndStroke('#f9fafb', '#e5e7eb');
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#10b981');
+        t(voucher.voucherCode, L, BOX_Y + 9, { width: BOX1_W, align: 'center' });
+
+        // ─── TANGGAL section ───
+        doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#6b7280');
+        t('TANGGAL', BOX2_X, BOX_Y_LABEL);
+        doc.roundedRect(BOX2_X, BOX_Y, BOX2_W, BOX_H, 5).fillAndStroke('#f9fafb', '#e5e7eb');
         const dateStr = voucher.distributionDate
           ? new Date(voucher.distributionDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
           : '-';
-        doc.font('Helvetica-Bold').fontSize(9).fillColor('#111827');
-        t(dateStr, CARD_X + 200, y + 96, { width: 165, align: 'center' });
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111827');
+        t(dateStr, BOX2_X, BOX_Y + 10, { width: BOX2_W, align: 'center' });
 
-        // ─── Dotted separator ───
+        // ─── Footer info (bottom of left area) ───
+        doc.font('Helvetica').fontSize(6.5).fillColor('#9ca3af');
+        t('ⓘ  Tunjukkan kupon ini saat pengambilan. Hanya panitia yang boleh memindai.', L, y + CARD_H - 18);
+
+        // ─── Dotted vertical separator ───
         doc.save();
-        doc.moveTo(CARD_X + 385, y + 12)
-           .lineTo(CARD_X + 385, y + CARD_H - 12)
+        doc.moveTo(SEP_X, y + 10)
+           .lineTo(SEP_X, y + CARD_H - 10)
            .lineWidth(1).dash(3, { space: 3 }).stroke('#d1d5db');
         doc.undash();
         doc.restore();
 
-        // ─── QR Code area ───
-        doc.roundedRect(CARD_X + 400, y + 12, CARD_W - 400 - 12, CARD_H - 24, 6).fill('#ecfdf5');
+        // ─── Right panel: QR Code (centered vertically) ───
+        doc.roundedRect(R_X, y + 10, R_W, CARD_H - 20, 6).fill('#ecfdf5');
+
+        const QR_SIZE = 92;
+        const qrTextH = 18;      // space for 2 lines of text below QR
+        const qrTotalH = QR_SIZE + 6 + qrTextH;  // QR + gap + text
+        const qrPanelH = CARD_H - 20;             // green panel height
+        const qrOffsetY = (qrPanelH - qrTotalH) / 2; // center vertically
+        const qrX = R_X + (R_W - QR_SIZE) / 2;
+        const qrY = y + 10 + qrOffsetY;
+
         if (voucher.qrData && voucher.qrData.includes(',')) {
           try {
             const qrBuffer = Buffer.from(voucher.qrData.split(',')[1], 'base64');
-            doc.image(qrBuffer, CARD_X + 412, y + 18, { width: 82, height: 82 });
+            doc.image(qrBuffer, qrX, qrY, { width: QR_SIZE, height: QR_SIZE });
           } catch (e) { /* skip */ }
         }
-        doc.font('Helvetica-Bold').fontSize(5).fillColor('#10b981');
-        t('SCAN UNTUK VERIFIKASI', CARD_X + 400, y + CARD_H - 30, { width: CARD_W - 400 - 12, align: 'center' });
-        t('OLEH PANITIA', CARD_X + 400, y + CARD_H - 23, { width: CARD_W - 400 - 12, align: 'center' });
-
-        // ─── Footer text ───
-        doc.font('Helvetica').fontSize(6).fillColor('#9ca3af');
-        t('ⓘ Tunjukkan kupon ini saat pengambilan. Hanya panitia yang boleh memindai.', CARD_X + 15, y + CARD_H - 16);
+        doc.font('Helvetica-Bold').fontSize(5.5).fillColor('#10b981');
+        t('SCAN UNTUK VERIFIKASI', R_X, qrY + QR_SIZE + 6, { width: R_W, align: 'center' });
+        t('OLEH PANITIA', R_X, qrY + QR_SIZE + 14, { width: R_W, align: 'center' });
       }
 
       doc.end();
