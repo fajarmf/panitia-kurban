@@ -22,11 +22,11 @@ export class VouchersService {
     @InjectRepository(Event)
     private eventsRepository: Repository<Event>,
     private vouchersGateway: VouchersGateway,
-  ) {}
+  ) { }
 
 
 
-  async findAll(eventId?: string, status?: string, search?: string): Promise<Voucher[]> {
+  async findAll(eventId?: string, status?: string, search?: string, distributionDate?: string): Promise<Voucher[]> {
     const qb = this.vouchersRepository
       .createQueryBuilder('v')
       .leftJoinAndSelect('v.event', 'event')
@@ -42,6 +42,9 @@ export class VouchersService {
     }
     if (search) {
       qb.andWhere('v.voucher_code ILIKE :search', { search: `%${search}%` });
+    }
+    if (distributionDate) {
+      qb.andWhere('v.distribution_date = :distributionDate', { distributionDate });
     }
 
     const vouchers = await qb.getMany();
@@ -95,6 +98,9 @@ export class VouchersService {
   async create(eventId: string, distributionDate: string, userId: string): Promise<Voucher> {
     const event = await this.eventsRepository.findOne({ where: { id: eventId } });
     if (!event) throw new NotFoundException('Event tidak ditemukan');
+
+    // Validate distribution date is within event date range
+    this.validateDistributionDate(distributionDate, event);
 
     const voucherCode = await this.generateUniqueCode(distributionDate ? new Date(distributionDate) : new Date());
     const qrData = JSON.stringify({ code: voucherCode, eventId, year: event.year });
@@ -322,8 +328,8 @@ export class VouchersService {
         // ─── Dotted vertical separator ───
         doc.save();
         doc.moveTo(SEP_X, y + 10)
-           .lineTo(SEP_X, y + CARD_H - 10)
-           .lineWidth(1).dash(3, { space: 3 }).stroke('#d1d5db');
+          .lineTo(SEP_X, y + CARD_H - 10)
+          .lineWidth(1).dash(3, { space: 3 }).stroke('#d1d5db');
         doc.undash();
         doc.restore();
 
@@ -381,6 +387,77 @@ export class VouchersService {
     // Delete scan logs first
     await this.scanLogsRepository.delete({ voucherId: id });
     await this.vouchersRepository.remove(voucher);
+  }
+
+  async bulkDelete(ids: string[]): Promise<{ deleted: number }> {
+    // Delete scan logs for all vouchers
+    await this.scanLogsRepository
+      .createQueryBuilder()
+      .delete()
+      .where('voucher_id IN (:...ids)', { ids })
+      .execute();
+    const result = await this.vouchersRepository
+      .createQueryBuilder()
+      .delete()
+      .where('id IN (:...ids)', { ids })
+      .execute();
+    return { deleted: result.affected || 0 };
+  }
+
+  async bulkUpdateDate(ids: string[], newDate: string): Promise<{ updated: number }> {
+    // Validate date against each voucher's event
+    const vouchers = await this.vouchersRepository.find({
+      where: ids.map(id => ({ id })),
+      relations: ['event'],
+    });
+    for (const voucher of vouchers) {
+      if (voucher.event) {
+        this.validateDistributionDate(newDate, voucher.event);
+      }
+    }
+    const result = await this.vouchersRepository
+      .createQueryBuilder()
+      .update()
+      .set({ distributionDate: new Date(newDate) as any })
+      .where('id IN (:...ids)', { ids })
+      .execute();
+    return { updated: result.affected || 0 };
+  }
+
+  async updateDistributionDate(id: string, newDate: string): Promise<Voucher> {
+    const voucher = await this.vouchersRepository.findOne({
+      where: { id },
+      relations: ['event'],
+    });
+    if (!voucher) throw new NotFoundException('Voucher tidak ditemukan');
+    if (voucher.event) {
+      this.validateDistributionDate(newDate, voucher.event);
+    }
+    voucher.distributionDate = new Date(newDate);
+    return this.vouchersRepository.save(voucher);
+  }
+
+  private validateDistributionDate(distributionDate: string, event: Event): void {
+    if (!distributionDate) return;
+    const dist = new Date(distributionDate);
+    if (event.startDate) {
+      const start = new Date(event.startDate);
+      start.setHours(0, 0, 0, 0);
+      dist.setHours(0, 0, 0, 0);
+      if (dist < start) {
+        const s = start.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        throw new BadRequestException(`Tanggal distribusi tidak boleh sebelum tanggal mulai event (${s})`);
+      }
+    }
+    if (event.endDate) {
+      const end = new Date(event.endDate);
+      end.setHours(23, 59, 59, 999);
+      dist.setHours(0, 0, 0, 0);
+      if (dist > end) {
+        const e = end.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        throw new BadRequestException(`Tanggal distribusi tidak boleh setelah tanggal selesai event (${e})`);
+      }
+    }
   }
 
   async stats(eventId?: string) {

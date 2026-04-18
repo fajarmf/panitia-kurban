@@ -1,7 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from './event.entity';
+import { Voucher } from '../vouchers/voucher.entity';
+import { ScanLog } from '../vouchers/scan-log.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,6 +12,10 @@ export class EventsService {
   constructor(
     @InjectRepository(Event)
     private eventsRepository: Repository<Event>,
+    @InjectRepository(Voucher)
+    private vouchersRepository: Repository<Voucher>,
+    @InjectRepository(ScanLog)
+    private scanLogsRepository: Repository<ScanLog>,
   ) {}
 
   async findAll(): Promise<Event[]> {
@@ -27,12 +33,14 @@ export class EventsService {
   }
 
   async create(data: Partial<Event>): Promise<Event> {
+    this.validateDateRange(data);
     const event = this.eventsRepository.create(data);
     return this.eventsRepository.save(event);
   }
 
   async update(id: string, data: Partial<Event>): Promise<Event> {
     const event = await this.findById(id);
+    this.validateDateRange(data);
     Object.assign(event, data);
     return this.eventsRepository.save(event);
   }
@@ -53,6 +61,37 @@ export class EventsService {
 
   async delete(id: string): Promise<void> {
     const event = await this.findById(id);
+
+    // Get all voucher IDs for this event
+    const vouchers = await this.vouchersRepository.find({
+      where: { eventId: id },
+      select: ['id'],
+    });
+    const voucherIds = vouchers.map(v => v.id);
+
+    // Delete scan logs for all vouchers of this event
+    if (voucherIds.length > 0) {
+      await this.scanLogsRepository
+        .createQueryBuilder()
+        .delete()
+        .where('voucher_id IN (:...ids)', { ids: voucherIds })
+        .execute();
+    }
+
+    // Delete all vouchers for this event
+    await this.vouchersRepository.delete({ eventId: id });
+
+    // Delete the event itself
     await this.eventsRepository.remove(event);
+  }
+
+  private validateDateRange(data: Partial<Event>): void {
+    if (data.startDate && data.endDate) {
+      const start = new Date(data.startDate);
+      const end = new Date(data.endDate);
+      if (start > end) {
+        throw new BadRequestException('Tanggal mulai harus sebelum tanggal selesai');
+      }
+    }
   }
 }

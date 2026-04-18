@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,19 +8,28 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
 </head>
+
 <body>
   <div class="bg-orb bg-orb-1"></div>
   <div class="bg-orb bg-orb-2"></div>
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <div class="sidebar-logo">
+      <h1>🕌 Al Hijrah CGE</h1>
+      <p>Sistem Panitia Kurban</p>
+    </div>
     <nav class="sidebar-nav"></nav>
   </aside>
-  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-items"></div>
+  </nav>
 
   <main class="main-content">
     <div class="top-bar">
       <div class="flex items-center gap-3">
-        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg></button>
         <h2>Kelola Event</h2>
       </div>
       <div class="user-info" id="user-info"></div>
@@ -27,13 +37,17 @@
 
     <div class="flex justify-end mb-4">
       <button class="btn-primary" onclick="openModal()">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
         Tambah Event
       </button>
     </div>
 
     <div id="events-list" class="grid gap-4">
-      <div class="text-center py-12"><div class="spinner"></div></div>
+      <div class="text-center py-12">
+        <div class="spinner"></div>
+      </div>
     </div>
   </main>
 
@@ -46,22 +60,18 @@
       </div>
       <form onsubmit="saveEvent(event)">
         <input type="hidden" id="edit-id">
-        <div class="form-group">
-          <label>Nama Event</label>
-          <input type="text" id="form-name" class="input-field" placeholder="contoh: Idul Adha 1447H" required>
+        <div class="form-group"><label>Nama Event</label><input type="text" id="form-name" class="input-field"
+            placeholder="contoh: Idul Adha 1447H" required></div>
+        <div class="form-group"><label>Tahun</label><input type="text" id="form-year" class="input-field"
+            placeholder="contoh: 2026 atau 1447H" required></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group"><label>Tanggal Mulai</label><input type="date" id="form-start-date"
+              class="input-field"></div>
+          <div class="form-group"><label>Tanggal Selesai</label><input type="date" id="form-end-date"
+              class="input-field"></div>
         </div>
-        <div class="form-group">
-          <label>Tahun</label>
-          <input type="text" id="form-year" class="input-field" placeholder="contoh: 2026 atau 1447H" required>
-        </div>
-        <div class="form-group">
-          <label>Tanggal Event</label>
-          <input type="date" id="form-date" class="input-field">
-        </div>
-        <div class="form-group">
-          <label>Deskripsi</label>
-          <textarea id="form-desc" class="input-field" rows="3" placeholder="Deskripsi event (opsional)"></textarea>
-        </div>
+        <div class="form-group"><label>Deskripsi</label><textarea id="form-desc" class="input-field" rows="3"
+            placeholder="Deskripsi event (opsional)"></textarea></div>
         <div class="flex gap-3 mt-6">
           <button type="button" class="btn-secondary flex-1" onclick="closeModal()">Batal</button>
           <button type="submit" class="btn-primary flex-1">Simpan</button>
@@ -76,6 +86,15 @@
     initSidebar('events');
     loadEvents();
 
+    function formatDateRange(startDate, endDate) {
+      if (!startDate && !endDate) return '';
+      const opts = { day: 'numeric', month: 'long', year: 'numeric' };
+      const s = startDate ? new Date(startDate).toLocaleDateString('id-ID', opts) : '?';
+      const e = endDate ? new Date(endDate).toLocaleDateString('id-ID', opts) : '?';
+      if (startDate && endDate) return `${s} — ${e}`;
+      return s !== '?' ? `Mulai ${s}` : `Sampai ${e}`;
+    }
+
     async function loadEvents() {
       try {
         const events = await api('/events');
@@ -89,11 +108,12 @@
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div class="flex items-center gap-4">
                 ${e.logoPath
-                  ? `<img src="${e.logoPath}" class="w-16 h-16 rounded-xl object-cover border border-white/10" alt="Logo">`
-                  : `<div class="w-16 h-16 rounded-xl bg-emerald-800/50 flex items-center justify-center border border-white/10"><svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>`}
+            ? `<img src="${e.logoPath}" class="w-16 h-16 rounded-xl object-cover border border-white/10" alt="Logo">`
+            : `<div class="w-16 h-16 rounded-xl bg-emerald-800/50 flex items-center justify-center border border-white/10"><svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg></div>`}
                 <div>
                   <h3 class="font-bold text-lg text-emerald-100">${e.name}</h3>
-                  <p class="text-sm text-emerald-300/60">Tahun: ${e.year} ${e.eventDate ? '• ' + formatDate(e.eventDate) : ''}</p>
+                  <p class="text-sm text-emerald-300/60">Tahun: ${e.year}</p>
+                  ${(e.startDate || e.endDate) ? `<p class="text-sm text-emerald-300/60">📅 ${formatDateRange(e.startDate, e.endDate)}</p>` : ''}
                   ${e.description ? `<p class="text-xs text-emerald-300/40 mt-1">${e.description}</p>` : ''}
                 </div>
               </div>
@@ -101,6 +121,7 @@
                 <span class="badge ${e.isActive ? 'badge-active' : 'badge-cancelled'}">${e.isActive ? 'Aktif' : 'Nonaktif'}</span>
                 <label><input type="file" class="hidden" accept="image/*" onchange="uploadLogo('${e.id}', this.files[0])"><span class="btn-secondary btn-sm cursor-pointer">📷 Logo</span></label>
                 <button class="btn-secondary btn-sm" onclick='editEvent(${JSON.stringify(e)})'>Edit</button>
+                <button class="btn-danger btn-sm" onclick="deleteEvent('${e.id}', '${e.name.replace(/'/g, "\\'")}')">🗑 Hapus</button>
               </div>
             </div>
           </div>
@@ -113,7 +134,8 @@
       document.getElementById('edit-id').value = '';
       document.getElementById('form-name').value = '';
       document.getElementById('form-year').value = new Date().getFullYear().toString();
-      document.getElementById('form-date').value = '';
+      document.getElementById('form-start-date').value = '';
+      document.getElementById('form-end-date').value = '';
       document.getElementById('form-desc').value = '';
       document.getElementById('event-modal').classList.add('active');
     }
@@ -122,7 +144,8 @@
       document.getElementById('edit-id').value = e.id;
       document.getElementById('form-name').value = e.name;
       document.getElementById('form-year').value = e.year;
-      document.getElementById('form-date').value = e.eventDate ? e.eventDate.split('T')[0] : '';
+      document.getElementById('form-start-date').value = e.startDate ? e.startDate.split('T')[0] : '';
+      document.getElementById('form-end-date').value = e.endDate ? e.endDate.split('T')[0] : '';
       document.getElementById('form-desc').value = e.description || '';
       document.getElementById('event-modal').classList.add('active');
     }
@@ -131,7 +154,13 @@
     async function saveEvent(ev) {
       ev.preventDefault();
       const id = document.getElementById('edit-id').value;
-      const data = { name: document.getElementById('form-name').value, year: document.getElementById('form-year').value, eventDate: document.getElementById('form-date').value || null, description: document.getElementById('form-desc').value || null };
+      const data = {
+        name: document.getElementById('form-name').value,
+        year: document.getElementById('form-year').value,
+        startDate: document.getElementById('form-start-date').value || null,
+        endDate: document.getElementById('form-end-date').value || null,
+        description: document.getElementById('form-desc').value || null,
+      };
       try {
         if (id) { await api(`/events/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); showToast('Event diupdate'); }
         else { await api('/events', { method: 'POST', body: JSON.stringify(data) }); showToast('Event ditambahkan'); }
@@ -145,6 +174,16 @@
       try { await api(`/events/${eventId}/logo`, { method: 'POST', body: fd }); showToast('Logo diupload'); loadEvents(); }
       catch (err) { showToast(err.message, 'error'); }
     }
+
+    async function deleteEvent(id, name) {
+      if (!confirmAction(`Yakin ingin menghapus event "${name}"?\n\nSemua voucher dan data terkait juga akan dihapus!`)) return;
+      try {
+        await api(`/events/${id}`, { method: 'DELETE' });
+        showToast('Event dan semua voucher terkait berhasil dihapus');
+        loadEvents();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
   </script>
 </body>
+
 </html>

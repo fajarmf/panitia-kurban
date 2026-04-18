@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -28,8 +29,9 @@ export class VouchersController {
     @Query('eventId') eventId?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
+    @Query('distributionDate') distributionDate?: string,
   ) {
-    return this.vouchersService.findAll(eventId, status, search);
+    return this.vouchersService.findAll(eventId, status, search, distributionDate);
   }
 
   @Get('export')
@@ -71,12 +73,41 @@ export class VouchersController {
     res.end(buffer);
   }
 
+  // ─── Bulk operations (BEFORE :id routes!) ───
+
+  @Post('bulk-delete')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  bulkDelete(@Body() body: { ids: string[] }) {
+    if (!body.ids || !body.ids.length) {
+      throw new BadRequestException('ids array is required');
+    }
+    return this.vouchersService.bulkDelete(body.ids);
+  }
+
+  @Patch('bulk-update-date')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  bulkUpdateDate(@Body() body: { ids: string[]; distributionDate: string }) {
+    if (!body.ids || !body.ids.length || !body.distributionDate) {
+      throw new BadRequestException('ids array and distributionDate are required');
+    }
+    return this.vouchersService.bulkUpdateDate(body.ids, body.distributionDate);
+  }
+
+  // ─── Single item routes ───
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.vouchersService.findById(id);
   }
 
-
+  @Patch(':id/date')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  updateDate(@Param('id') id: string, @Body() body: { distributionDate: string }) {
+    if (!body.distributionDate) {
+      throw new BadRequestException('distributionDate is required');
+    }
+    return this.vouchersService.updateDistributionDate(id, body.distributionDate);
+  }
 
   @Post()
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)

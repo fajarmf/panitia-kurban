@@ -19,8 +19,11 @@ export class Event {
   @Column()
   year: string;
 
-  @Column({ name: 'event_date', type: 'date', nullable: true })
-  eventDate: Date;
+  @Column({ name: 'start_date', type: 'date', nullable: true })
+  startDate: Date;
+
+  @Column({ name: 'end_date', type: 'date', nullable: true })
+  endDate: Date;
 
   @Column({ nullable: true })
   description: string;

@@ -1,32 +1,93 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Voucher - Panitia Kurban</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .bulk-bar {
+      display: none;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 12px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .bulk-bar.active {
+      display: flex;
+    }
+
+    .bulk-bar .count {
+      font-weight: 700;
+      color: #6ee7b7;
+      font-size: 14px;
+    }
+
+    .cb-cell {
+      width: 36px;
+      text-align: center;
+    }
+
+    .cb-cell input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+
+    .date-clickable {
+      cursor: pointer;
+      border-bottom: 1px dashed rgba(110, 231, 183, 0.3);
+      padding-bottom: 1px;
+      transition: border-color 0.2s;
+    }
+
+    .date-clickable:hover {
+      border-bottom-color: #10b981;
+    }
+
+    .inline-date {
+      width: 130px;
+      font-size: 12px;
+    }
+  </style>
 </head>
+
 <body>
   <div class="bg-orb bg-orb-1"></div>
   <div class="bg-orb bg-orb-2"></div>
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <div class="sidebar-logo">
+      <h1>🕌 Al Hijrah CGE</h1>
+      <p>Sistem Panitia Kurban</p>
+    </div>
     <nav class="sidebar-nav"></nav>
   </aside>
-  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-items"></div>
+  </nav>
 
   <main class="main-content">
     <div class="top-bar">
       <div class="flex items-center gap-3">
-        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg></button>
         <h2>Kelola Voucher</h2>
       </div>
       <div class="user-info" id="user-info"></div>
     </div>
 
     <!-- Filters -->
-    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+    <div class="flex flex-col sm:flex-row gap-3 mb-4 flex-wrap">
       <select id="event-filter" class="input-field" style="max-width:250px" onchange="loadVouchers()"></select>
       <select id="status-filter" class="input-field" style="max-width:180px" onchange="loadVouchers()">
         <option value="">Semua Status</option>
@@ -34,7 +95,10 @@
         <option value="CLAIMED">Diklaim</option>
         <option value="CANCELLED">Dibatalkan</option>
       </select>
-      <input type="text" id="search-input" class="input-field" style="max-width:220px" placeholder="🔍 Cari kode voucher..." oninput="debounceSearch()">
+      <input type="date" id="date-filter" class="input-field" style="max-width:170px" onchange="loadVouchers()"
+        title="Filter tanggal distribusi">
+      <input type="text" id="search-input" class="input-field" style="max-width:220px"
+        placeholder="🔍 Cari kode voucher..." oninput="debounceSearch()">
       <div class="flex gap-2 ml-auto">
         <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
         <button class="btn-secondary" onclick="downloadBatchPdf()">📄 Download Seluruh Kupon</button>
@@ -43,18 +107,49 @@
       </div>
     </div>
 
+    <!-- Bulk Action Bar -->
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="count" id="bulk-count">0 dipilih</span>
+      <button class="btn-danger btn-sm" onclick="bulkDelete()">🗑 Hapus Terpilih</button>
+      <button class="btn-secondary btn-sm" onclick="openBulkDateModal()">📅 Ubah Tanggal Terpilih</button>
+      <button class="btn-secondary btn-sm" style="margin-left:auto;" onclick="deselectAll()">Batal Pilih</button>
+    </div>
+
     <!-- Stats mini -->
     <div class="grid grid-cols-3 gap-3 mb-4">
-      <div class="glass-card p-3 text-center"><div class="text-xl font-bold text-emerald-300" id="v-total">0</div><div class="text-xs text-emerald-300/50">Total</div></div>
-      <div class="glass-card p-3 text-center"><div class="text-xl font-bold text-blue-300" id="v-claimed">0</div><div class="text-xs text-emerald-300/50">Diklaim</div></div>
-      <div class="glass-card p-3 text-center"><div class="text-xl font-bold text-green-300" id="v-active">0</div><div class="text-xs text-emerald-300/50">Aktif</div></div>
+      <div class="glass-card p-3 text-center">
+        <div class="text-xl font-bold text-emerald-300" id="v-total">0</div>
+        <div class="text-xs text-emerald-300/50">Total</div>
+      </div>
+      <div class="glass-card p-3 text-center">
+        <div class="text-xl font-bold text-blue-300" id="v-claimed">0</div>
+        <div class="text-xs text-emerald-300/50">Diklaim</div>
+      </div>
+      <div class="glass-card p-3 text-center">
+        <div class="text-xl font-bold text-green-300" id="v-active">0</div>
+        <div class="text-xs text-emerald-300/50">Aktif</div>
+      </div>
     </div>
 
     <div class="glass-card p-4">
       <div class="table-responsive">
         <table class="data-table">
-          <thead><tr><th>Kode Voucher</th><th>Tanggal</th><th>Status</th><th class="hide-mobile">Dibuat</th><th>Aksi</th></tr></thead>
-          <tbody id="vouchers-table"><tr><td colspan="5" class="text-center py-8"><div class="spinner"></div></td></tr></tbody>
+          <thead>
+            <tr>
+              <th class="cb-cell"><input type="checkbox" id="select-all" onchange="toggleSelectAll(this.checked)"></th>
+              <th>Kode Voucher</th>
+              <th>Tanggal Distribusi</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="vouchers-table">
+            <tr>
+              <td colspan="5" class="text-center py-8">
+                <div class="spinner"></div>
+              </td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
@@ -63,10 +158,13 @@
   <!-- Create Modal -->
   <div class="modal-overlay" id="create-modal">
     <div class="modal-content">
-      <div class="modal-header"><h3>Buat Voucher</h3><button class="modal-close" onclick="closeCreate()">✕</button></div>
+      <div class="modal-header">
+        <h3>Buat Voucher</h3><button class="modal-close" onclick="closeCreate()">✕</button>
+      </div>
       <form onsubmit="createVoucher(event)">
         <div class="form-group"><label>Event</label><select id="c-event" class="input-field" required></select></div>
-        <div class="form-group"><label>Tanggal Distribusi</label><input type="date" id="c-date" class="input-field" required></div>
+        <div class="form-group"><label>Tanggal Distribusi</label><input type="date" id="c-date" class="input-field"
+            required></div>
         <div class="flex gap-3 mt-6">
           <button type="button" class="btn-secondary flex-1" onclick="closeCreate()">Batal</button>
           <button type="submit" class="btn-primary flex-1">Buat</button>
@@ -78,14 +176,36 @@
   <!-- Batch Modal -->
   <div class="modal-overlay" id="batch-modal">
     <div class="modal-content">
-      <div class="modal-header"><h3>Batch Voucher</h3><button class="modal-close" onclick="closeBatch()">✕</button></div>
+      <div class="modal-header">
+        <h3>Batch Voucher</h3><button class="modal-close" onclick="closeBatch()">✕</button>
+      </div>
       <form onsubmit="createBatch(event)">
         <div class="form-group"><label>Event</label><select id="b-event" class="input-field" required></select></div>
-        <div class="form-group"><label>Jumlah Voucher</label><input type="number" id="b-count" class="input-field" min="1" max="500" value="10" required></div>
-        <div class="form-group"><label>Tanggal Distribusi</label><input type="date" id="b-date" class="input-field" required></div>
+        <div class="form-group"><label>Jumlah Voucher</label><input type="number" id="b-count" class="input-field"
+            min="1" max="500" value="10" required></div>
+        <div class="form-group"><label>Tanggal Distribusi</label><input type="date" id="b-date" class="input-field"
+            required></div>
         <div class="flex gap-3 mt-6">
           <button type="button" class="btn-secondary flex-1" onclick="closeBatch()">Batal</button>
           <button type="submit" class="btn-primary flex-1" id="batch-btn">Buat Batch</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bulk Date Modal -->
+  <div class="modal-overlay" id="bulk-date-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Ubah Tanggal Distribusi</h3><button class="modal-close" onclick="closeBulkDate()">✕</button>
+      </div>
+      <form onsubmit="submitBulkDate(event)">
+        <p class="text-sm text-emerald-300/60 mb-4" id="bulk-date-info">Mengubah tanggal untuk 0 voucher terpilih</p>
+        <div class="form-group"><label>Tanggal Distribusi Baru</label><input type="date" id="bd-date"
+            class="input-field" required></div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" class="btn-secondary flex-1" onclick="closeBulkDate()">Batal</button>
+          <button type="submit" class="btn-primary flex-1">Simpan</button>
         </div>
       </form>
     </div>
@@ -96,20 +216,54 @@
     if (!requireAuth()) throw new Error('Not authenticated');
     initSidebar('vouchers');
     let searchTimeout;
+    let selectedIds = new Set();
+    let allVoucherIds = [];
+
     loadEventOptions('event-filter', true).then(() => loadVouchers());
     loadEventOptions('c-event');
     loadEventOptions('b-event');
 
     function debounceSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(loadVouchers, 400); }
 
+    function updateBulkBar() {
+      const bar = document.getElementById('bulk-bar');
+      const count = selectedIds.size;
+      document.getElementById('bulk-count').textContent = `${count} dipilih`;
+      if (count > 0) bar.classList.add('active');
+      else bar.classList.remove('active');
+      document.getElementById('select-all').checked = allVoucherIds.length > 0 && allVoucherIds.every(id => selectedIds.has(id));
+    }
+
+    function toggleSelectAll(checked) {
+      if (checked) allVoucherIds.forEach(id => selectedIds.add(id));
+      else allVoucherIds.forEach(id => selectedIds.delete(id));
+      document.querySelectorAll('.v-checkbox').forEach(cb => cb.checked = checked);
+      updateBulkBar();
+    }
+
+    function toggleSelect(id, checked) {
+      if (checked) selectedIds.add(id);
+      else selectedIds.delete(id);
+      updateBulkBar();
+    }
+
+    function deselectAll() {
+      selectedIds.clear();
+      document.querySelectorAll('.v-checkbox').forEach(cb => cb.checked = false);
+      document.getElementById('select-all').checked = false;
+      updateBulkBar();
+    }
+
     async function loadVouchers() {
       const eventId = document.getElementById('event-filter').value;
       const status = document.getElementById('status-filter').value;
       const search = document.getElementById('search-input').value;
+      const distributionDate = document.getElementById('date-filter').value;
       let params = [];
       if (eventId) params.push(`eventId=${eventId}`);
       if (status) params.push(`status=${status}`);
       if (search) params.push(`search=${search}`);
+      if (distributionDate) params.push(`distributionDate=${distributionDate}`);
       const qs = params.length ? '?' + params.join('&') : '';
       try {
         const vouchers = await api(`/vouchers${qs}`);
@@ -117,18 +271,47 @@
         document.getElementById('v-total').textContent = stats.total;
         document.getElementById('v-claimed').textContent = stats.claimed;
         document.getElementById('v-active').textContent = stats.active;
+
+        allVoucherIds = vouchers.map(v => v.id);
+
         const tbody = document.getElementById('vouchers-table');
         if (!vouchers.length) { tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-emerald-300/40">Tidak ada voucher</td></tr>'; return; }
         tbody.innerHTML = vouchers.map(v => `<tr>
+          <td class="cb-cell"><input type="checkbox" class="v-checkbox" data-id="${v.id}" ${selectedIds.has(v.id) ? 'checked' : ''} onchange="toggleSelect('${v.id}', this.checked)"></td>
           <td><span class="font-mono font-bold text-emerald-200">${v.voucherCode}</span></td>
-          <td>${formatDate(v.distributionDate)}</td>
+          <td>
+            <span class="date-clickable" onclick="showInlineDate(this, '${v.id}', '${v.distributionDate ? v.distributionDate.split('T')[0] : ''}')" title="Klik untuk ubah tanggal">
+              ${formatDate(v.distributionDate)}
+            </span>
+          </td>
           <td><span class="badge badge-${v.status.toLowerCase()}">${v.status === 'ACTIVE' ? 'Aktif' : v.status === 'CLAIMED' ? 'Diklaim' : 'Batal'}</span></td>
-          <td class="hide-mobile text-xs text-emerald-300/50">${formatDateTime(v.createdAt)}</td>
           <td><div class="flex gap-1 flex-wrap">
             ${v.status === 'ACTIVE' ? `<button class="btn-danger btn-sm" onclick="deleteVoucher('${v.id}')">🗑</button>` : ''}
           </div></td>
         </tr>`).join('');
+        updateBulkBar();
       } catch (err) { showToast('Gagal memuat voucher', 'error'); }
+    }
+
+    function showInlineDate(el, id, currentDate) {
+      // Replace the span with an inline date input
+      const input = document.createElement('input');
+      input.type = 'date';
+      input.value = currentDate;
+      input.className = 'input-field inline-date';
+      input.onchange = async function () {
+        try {
+          await api(`/vouchers/${id}/date`, { method: 'PATCH', body: JSON.stringify({ distributionDate: this.value }) });
+          showToast('Tanggal diperbarui');
+          loadVouchers();
+        } catch (err) { showToast(err.message, 'error'); loadVouchers(); }
+      };
+      input.onblur = function () {
+        // Delay to allow onchange to fire first
+        setTimeout(() => { if (el.parentNode) loadVouchers(); }, 200);
+      };
+      el.replaceWith(input);
+      input.focus();
     }
 
     async function exportCsv() {
@@ -165,13 +348,13 @@
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'Gagal mendownload Batch PDF');
+          throw new Error(errData.message || 'Gagal mendownload PDF');
         }
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = `vouchers-batch.pdf`; a.click();
         URL.revokeObjectURL(url);
-        showToast('Batch PDF berhasil didownload', 'success');
+        showToast('PDF berhasil didownload', 'success');
       } catch (err) { showToast(err.message, 'error'); }
     }
 
@@ -179,6 +362,13 @@
     function closeCreate() { document.getElementById('create-modal').classList.remove('active'); }
     function openBatchModal() { document.getElementById('batch-modal').classList.add('active'); }
     function closeBatch() { document.getElementById('batch-modal').classList.remove('active'); }
+
+    function openBulkDateModal() {
+      document.getElementById('bulk-date-info').textContent = `Mengubah tanggal untuk ${selectedIds.size} voucher terpilih`;
+      document.getElementById('bd-date').value = '';
+      document.getElementById('bulk-date-modal').classList.add('active');
+    }
+    function closeBulkDate() { document.getElementById('bulk-date-modal').classList.remove('active'); }
 
     async function createVoucher(e) {
       e.preventDefault();
@@ -199,13 +389,38 @@
       btn.disabled = false; btn.textContent = 'Buat Batch';
     }
 
-
-
     async function deleteVoucher(id) {
       if (!confirmAction('Yakin ingin menghapus voucher ini?')) return;
       try { await api(`/vouchers/${id}`, { method: 'DELETE' }); showToast('Voucher dihapus'); loadVouchers(); }
       catch (err) { showToast(err.message, 'error'); }
     }
+
+    async function bulkDelete() {
+      const ids = Array.from(selectedIds);
+      if (!ids.length) return;
+      if (!confirmAction(`Yakin ingin menghapus ${ids.length} voucher terpilih?`)) return;
+      try {
+        const result = await api('/vouchers/bulk-delete', { method: 'POST', body: JSON.stringify({ ids }) });
+        showToast(`${result.deleted} voucher berhasil dihapus`);
+        selectedIds.clear();
+        loadVouchers();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function submitBulkDate(e) {
+      e.preventDefault();
+      const ids = Array.from(selectedIds);
+      const newDate = document.getElementById('bd-date').value;
+      if (!ids.length || !newDate) return;
+      try {
+        const result = await api('/vouchers/bulk-update-date', { method: 'PATCH', body: JSON.stringify({ ids, distributionDate: newDate }) });
+        showToast(`${result.updated} voucher tanggal diperbarui`);
+        closeBulkDate();
+        selectedIds.clear();
+        loadVouchers();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
   </script>
 </body>
+
 </html>
