@@ -42,7 +42,10 @@ export class UsersService {
 
   async create(dto: CreateUserDto): Promise<User> {
     if (dto.role === 'SUPER_ADMIN' as any) {
-      throw new ConflictException('Tidak dapat membuat Super Admin baru. Hanya ada 1 Super Admin di sistem.');
+      const existingSuperAdmin = await this.usersRepository.findOne({ where: { role: 'SUPER_ADMIN' as any } });
+      if (existingSuperAdmin) {
+        throw new ConflictException('Tidak dapat membuat Super Admin baru. Hanya ada 1 Super Admin di sistem.');
+      }
     }
     const existing = await this.findByUsername(dto.username);
     if (existing) {
