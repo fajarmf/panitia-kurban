@@ -230,7 +230,7 @@ export class VouchersService {
         // ═══════════════════════════════════════════════════
         // Layout constants relative to card
         // ═══════════════════════════════════════════════════
-        const SEP_X = CARD_X + 388;             // Dotted separator x
+        const SEP_X = CARD_X + 400;             // Dotted separator x
         const L = CARD_X + 18;                  // Left content margin
         const R_X = SEP_X + 14;                 // Right panel content start
         const R_W = CARD_X + CARD_W - R_X - 10; // Right panel content width
@@ -253,27 +253,34 @@ export class VouchersService {
         doc.rect(CARD_X, y + 4, 4, CARD_H - 4).fill('#10b981');
         doc.restore();
 
-        // ─── Logo / Fallback (vertically centered in upper half) ───
-        const LOGO_SIZE = 46;
-        const LOGO_X = L;
-        const LOGO_Y = y + 14;
+        // ─── Background Watermark Logo ───
+        doc.save();
+        const WM_SIZE = 150;
+        const WM_X = CARD_X + (CARD_W / 2) - (WM_SIZE / 2) - 40; // shift a bit to left of center to fit better
+        const WM_Y = y + (CARD_H / 2) - (WM_SIZE / 2);
+
         let hasLogo = false;
         if (voucher.event?.logoPath) {
           const logoFile = path.join(process.cwd(), voucher.event.logoPath.replace('/api/uploads/', 'uploads/'));
           if (fs.existsSync(logoFile)) {
             try {
-              doc.image(logoFile, LOGO_X + 2, LOGO_Y + 2, { width: LOGO_SIZE - 4, height: LOGO_SIZE - 4 });
+              doc.opacity(0.1);
+              doc.image(logoFile, WM_X, WM_Y, { width: WM_SIZE, height: WM_SIZE });
               hasLogo = true;
+              doc.opacity(1);
             } catch (e) { /* skip */ }
           }
         }
         if (!hasLogo) {
-          doc.roundedRect(LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE, 10).fillAndStroke('#ecfdf5', '#d1fae5');
-          doc.font('Helvetica-Bold').fontSize(14).fillColor('#10b981');
-          t('CGE', LOGO_X, LOGO_Y + 15, { width: LOGO_SIZE, align: 'center' });
+          doc.opacity(0.1);
+          doc.roundedRect(WM_X, WM_Y, WM_SIZE, WM_SIZE, 20).fillAndStroke('#ecfdf5', '#d1fae5');
+          doc.font('Helvetica-Bold').fontSize(32).fillColor('#10b981');
+          t('CGE', WM_X, WM_Y + 32, { width: WM_SIZE, align: 'center' });
+          doc.opacity(1);
         }
+        doc.restore();
 
-        // ─── Year Pill (to the right of logo) ───
+        // ─── Year Pill ───
         let yearText = '';
         if (voucher.distributionDate) {
           try {
@@ -286,7 +293,7 @@ export class VouchersService {
         } else {
           yearText = `Idul Adha ${voucher.event?.year || ''}`;
         }
-        const PILL_X = LOGO_X + LOGO_SIZE + 12;
+        const PILL_X = L;
         doc.roundedRect(PILL_X, y + 14, 170, 18, 9).fill('#ecfdf5');
         doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#10b981');
         t(yearText, PILL_X, y + 19, { width: 170, align: 'center' });
