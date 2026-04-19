@@ -13,6 +13,8 @@ import { SeedModule } from './seed/seed.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
 
+import { AppController } from './app.controller';
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 @Module({
@@ -47,6 +49,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     SeedModule,
     ActivityLogsModule,
   ],
+  controllers: [AppController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
