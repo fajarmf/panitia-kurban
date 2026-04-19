@@ -112,6 +112,7 @@
       <span class="count" id="bulk-count">0 dipilih</span>
       <button class="btn-danger btn-sm" onclick="bulkDelete()">🗑 Hapus Terpilih</button>
       <button class="btn-secondary btn-sm" onclick="openBulkDateModal()">📅 Ubah Tanggal Terpilih</button>
+      <button class="btn-secondary btn-sm" onclick="downloadSelectedPdf()">📄 Download Kupon Terpilih</button>
       <button class="btn-secondary btn-sm" style="margin-left:auto;" onclick="deselectAll()">Batal Pilih</button>
     </div>
 
@@ -151,6 +152,13 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      <div class="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-emerald-300/60" id="pagination-controls" style="display:none;">
+        <span id="page-info"></span>
+        <div class="flex gap-2 mt-2 sm:mt-0">
+          <button class="btn-secondary btn-sm" onclick="changePage(-1)" id="btn-prev">Sebelumnya</button>
+          <button class="btn-secondary btn-sm" onclick="changePage(1)" id="btn-next">Selanjutnya</button>
+        </div>
       </div>
     </div>
   </main>
@@ -218,12 +226,18 @@
     let searchTimeout;
     let selectedIds = new Set();
     let allVoucherIds = [];
+    let currentPage = 1;
+    const itemsPerPage = 50;
 
     loadEventOptions('event-filter', true).then(() => loadVouchers());
     loadEventOptions('c-event');
     loadEventOptions('b-event');
 
-    function debounceSearch() { clearTimeout(searchTimeout); searchTimeout = setTimeout(loadVouchers, 400); }
+    function debounceSearch() { 
+      currentPage = 1; 
+      clearTimeout(searchTimeout); 
+      searchTimeout = setTimeout(loadVouchers, 400); 
+    }
 
     function updateBulkBar() {
       const bar = document.getElementById('bulk-bar');
@@ -264,13 +278,20 @@
       if (status) params.push(`status=${status}`);
       if (search) params.push(`search=${search}`);
       if (distributionDate) params.push(`distributionDate=${distributionDate}`);
+      params.push(`page=${currentPage}`);
+      params.push(`limit=${itemsPerPage}`);
       const qs = params.length ? '?' + params.join('&') : '';
       try {
-        const vouchers = await api(`/vouchers${qs}`);
+        const response = await api(`/vouchers${qs}`);
         const stats = await api(`/vouchers/stats${eventId ? '?eventId=' + eventId : ''}`);
         document.getElementById('v-total').textContent = stats.total;
         document.getElementById('v-claimed').textContent = stats.claimed;
         document.getElementById('v-active').textContent = stats.active;
+
+        const isPaginated = !!response.data;
+        const vouchers = isPaginated ? response.data : response;
+        const totalItems = isPaginated ? response.total : vouchers.length;
+        const totalPages = isPaginated ? response.totalPages : 1;
 
         allVoucherIds = vouchers.map(v => v.id);
 
@@ -289,8 +310,27 @@
             ${v.status === 'ACTIVE' ? `<button class="btn-danger btn-sm" onclick="deleteVoucher('${v.id}')">🗑</button>` : ''}
           </div></td>
         </tr>`).join('');
+        
         updateBulkBar();
+
+        // Render pagination controls
+        const pagination = document.getElementById('pagination-controls');
+        if (totalItems > itemsPerPage) {
+          pagination.style.display = 'flex';
+          const startIdx = (currentPage - 1) * itemsPerPage + 1;
+          const endIdx = Math.min(currentPage * itemsPerPage, totalItems);
+          document.getElementById('page-info').textContent = `Menampilkan ${startIdx}-${endIdx} dari ${totalItems} voucher`;
+          document.getElementById('btn-prev').disabled = currentPage <= 1;
+          document.getElementById('btn-next').disabled = currentPage >= totalPages;
+        } else {
+          pagination.style.display = 'none';
+        }
       } catch (err) { showToast('Gagal memuat voucher', 'error'); }
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      loadVouchers();
     }
 
     function showInlineDate(el, id, currentDate) {
@@ -355,6 +395,31 @@
         const a = document.createElement('a'); a.href = url; a.download = `vouchers-batch.pdf`; a.click();
         URL.revokeObjectURL(url);
         showToast('PDF berhasil didownload', 'success');
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function downloadSelectedPdf() {
+      const ids = Array.from(selectedIds);
+      if (!ids.length) return;
+      try {
+        const token = getToken();
+        const res = await fetch('/api/vouchers/selected-pdf', {
+          method: 'POST',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ ids })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Gagal mendownload PDF terpilih');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `vouchers-selected.pdf`; a.click();
+        URL.revokeObjectURL(url);
+        showToast('PDF kupon terpilih berhasil didownload', 'success');
       } catch (err) { showToast(err.message, 'error'); }
     }
 

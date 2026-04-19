@@ -30,8 +30,12 @@ export class VouchersController {
     @Query('status') status?: string,
     @Query('search') search?: string,
     @Query('distributionDate') distributionDate?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.vouchersService.findAll(eventId, status, search, distributionDate);
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.vouchersService.findAll(eventId, status, search, distributionDate, pageNum, limitNum);
   }
 
   @Get('export')
@@ -74,6 +78,22 @@ export class VouchersController {
   }
 
   // ─── Bulk operations (BEFORE :id routes!) ───
+
+  @Post('selected-pdf')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  async downloadSelectedPdf(@Body() body: { ids: string[] }, @Res() res: Response) {
+    if (!body.ids || !body.ids.length) {
+      throw new BadRequestException('ids array is required');
+    }
+    const buffer = await this.vouchersService.generateSelectedPdf(body.ids);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=vouchers-selected.pdf`,
+      'Content-Length': buffer.length,
+    });
+    res.end(buffer);
+  }
+
 
   @Post('bulk-delete')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)

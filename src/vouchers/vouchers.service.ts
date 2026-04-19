@@ -26,13 +26,13 @@ export class VouchersService {
 
 
 
-  async findAll(eventId?: string, status?: string, search?: string, distributionDate?: string): Promise<Voucher[]> {
+  async findAll(eventId?: string, status?: string, search?: string, distributionDate?: string, page?: number, limit?: number): Promise<any> {
     const qb = this.vouchersRepository
       .createQueryBuilder('v')
       .leftJoinAndSelect('v.event', 'event')
       .leftJoinAndSelect('v.createdBy', 'creator')
       .leftJoinAndSelect('v.claimedBy', 'claimer')
-      .orderBy('v.created_at', 'DESC');
+      .orderBy('v.createdAt', 'DESC');
 
     if (eventId) {
       qb.andWhere('v.event_id = :eventId', { eventId });
@@ -47,22 +47,34 @@ export class VouchersService {
       qb.andWhere('v.distribution_date = :distributionDate', { distributionDate });
     }
 
-    const vouchers = await qb.getMany();
-    return vouchers.map((v) => {
-      if (v.createdBy) {
-        delete (v.createdBy as any).password;
-      }
-      if (v.claimedBy) {
-        delete (v.claimedBy as any).password;
-      }
-      return v;
-    });
+    if (page && limit) {
+      qb.skip((page - 1) * limit).take(limit);
+      const [vouchers, total] = await qb.getManyAndCount();
+      return {
+        data: vouchers.map((v) => {
+          if (v.createdBy) delete (v.createdBy as any).password;
+          if (v.claimedBy) delete (v.claimedBy as any).password;
+          return v;
+        }),
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / limit)
+      };
+    } else {
+      const vouchers = await qb.getMany();
+      return vouchers.map((v) => {
+        if (v.createdBy) delete (v.createdBy as any).password;
+        if (v.claimedBy) delete (v.claimedBy as any).password;
+        return v;
+      });
+    }
   }
 
   async exportCsv(eventId?: string, status?: string): Promise<string> {
-    const vouchers = await this.findAll(eventId, status);
+    const vouchers = (await this.findAll(eventId, status)) as Voucher[];
     const header = ['Kode Voucher', 'Event', 'Tahun', 'Status', 'Tgl Distribusi', 'Dibuat Oleh', 'Diklaim Oleh', 'Tgl Klaim'].join(',');
-    const rows = vouchers.map(v => {
+    const rows = vouchers.map((v: Voucher) => {
       return [
         v.voucherCode,
         v.event?.name || '',
@@ -187,6 +199,25 @@ export class VouchersService {
     if (!vouchers || vouchers.length === 0) {
       throw new NotFoundException('Tidak ada voucher aktif untuk event ini');
     }
+
+    return this.generatePdfBuffer(vouchers);
+  }
+
+  async generateSelectedPdf(ids: string[]): Promise<Buffer> {
+    const vouchers = await this.vouchersRepository.find({
+      where: ids.map(id => ({ id })),
+      relations: ['event'],
+      order: { voucherCode: 'ASC' },
+    });
+
+    if (!vouchers || vouchers.length === 0) {
+      throw new NotFoundException('Tidak ada voucher yang ditemukan');
+    }
+
+    return this.generatePdfBuffer(vouchers);
+  }
+
+  private generatePdfBuffer(vouchers: Voucher[]): Promise<Buffer> {
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({
