@@ -124,7 +124,9 @@
     function openModal() {
       document.getElementById('modal-title').textContent = 'Tambah User';
       document.getElementById('edit-id').value = '';
-      document.getElementById('form-username').value = '';
+      const usernameInput = document.getElementById('form-username');
+      usernameInput.value = '';
+      usernameInput.disabled = false;
       document.getElementById('form-password').value = '';
       document.getElementById('form-fullname').value = '';
       document.getElementById('form-role').value = 'PANITIA_SCANNER';
@@ -136,7 +138,9 @@
     function editUser(u) {
       document.getElementById('modal-title').textContent = 'Edit User';
       document.getElementById('edit-id').value = u.id;
-      document.getElementById('form-username').value = u.username;
+      const usernameInput = document.getElementById('form-username');
+      usernameInput.value = u.username;
+      usernameInput.disabled = true;
       document.getElementById('form-password').value = '';
       document.getElementById('form-fullname').value = u.fullName;
       document.getElementById('form-role').value = u.role;
