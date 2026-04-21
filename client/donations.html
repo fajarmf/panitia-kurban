@@ -86,7 +86,7 @@
       </div>
       <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none">
         <p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>
-        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain">
+        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain;cursor:zoom-in" onclick="showLightbox(this.src)">
       </div>
       <div class="form-group">
         <label>Catatan (opsional)</label>
@@ -150,7 +150,7 @@
 
         tbody.innerHTML = data.map(d => {
           const proofHtml = d.paymentProofPath
-            ? `<a href="/${d.paymentProofPath}" target="_blank" class="btn-secondary btn-sm">Lihat</a>`
+            ? `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(d.paymentProofPath)}')">Lihat</button>`
             : '<span class="text-white/30 text-xs">—</span>';
 
           const canVerify = d.status === 'PENDING_VERIFICATION';
@@ -192,7 +192,7 @@
       const proofWrap = document.getElementById('verify-proof-wrap');
       const proofImg = document.getElementById('verify-proof-img');
       if (d.paymentProofPath) {
-        proofImg.src = '/' + d.paymentProofPath;
+        proofImg.src = '/api/' + d.paymentProofPath;
         proofWrap.style.display = 'block';
       } else {
         proofWrap.style.display = 'none';
