@@ -194,6 +194,31 @@ function confirmAction(message) {
   return confirm(message);
 }
 
+// ===== Proof image lightbox =====
+function showLightbox(src) {
+  let overlay = document.getElementById('lightbox-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'lightbox-overlay';
+    overlay.className = 'lightbox-overlay';
+    overlay.innerHTML = `
+      <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+      <img id="lightbox-img" src="" alt="Bukti pembayaran">
+    `;
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closeLightbox();
+    });
+    document.body.appendChild(overlay);
+  }
+  document.getElementById('lightbox-img').src = src;
+  overlay.classList.add('active');
+}
+
+function closeLightbox() {
+  const overlay = document.getElementById('lightbox-overlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
 // ===== Event selector helper =====
 async function loadEventOptions(selectId, includeAll = false) {
   try {

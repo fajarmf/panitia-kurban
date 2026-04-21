@@ -111,7 +111,7 @@
       </div>
       <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none">
         <p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>
-        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain">
+        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain;cursor:zoom-in" onclick="showLightbox(this.src)">
       </div>
       <p id="verify-no-proof" class="text-sm text-yellow-300/70 mb-3" style="display:none">⚠️ Belum ada bukti pembayaran yang diunggah.</p>
       <div class="form-group">
@@ -178,7 +178,7 @@
 
         tbody.innerHTML = data.map(d => {
           const proofHtml = d.paymentProofPath
-            ? `<a href="/api/${escHtml(d.paymentProofPath)}" target="_blank" class="btn-secondary btn-sm">Lihat</a>`
+            ? `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(d.paymentProofPath)}')">Lihat</button>`
             : '<span class="text-white/30 text-xs">—</span>';
 
           const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
