@@ -178,7 +178,7 @@
 
         tbody.innerHTML = data.map(d => {
           const proofHtml = d.paymentProofPath
-            ? `<a href="/${escHtml(d.paymentProofPath)}" target="_blank" class="btn-secondary btn-sm">Lihat</a>`
+            ? `<a href="/api/${escHtml(d.paymentProofPath)}" target="_blank" class="btn-secondary btn-sm">Lihat</a>`
             : '<span class="text-white/30 text-xs">—</span>';
 
           const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
@@ -281,7 +281,7 @@
       const proofWrap = document.getElementById('verify-proof-wrap');
       const noProof = document.getElementById('verify-no-proof');
       if (d.paymentProofPath) {
-        document.getElementById('verify-proof-img').src = '/' + d.paymentProofPath;
+        document.getElementById('verify-proof-img').src = '/api/' + d.paymentProofPath;
         proofWrap.style.display = 'block';
         noProof.style.display = 'none';
       } else {
