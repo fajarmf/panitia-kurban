@@ -220,6 +220,39 @@ export class PengkurbanService {
     };
   }
 
+  async findByPhone(phone: string): Promise<
+    {
+      id: string;
+      registrationNumber: string;
+      name: string;
+      animalType: string;
+      status: RegistrationStatus;
+      createdAt: Date;
+    }[]
+  > {
+    const digits = phone.replace(/\D/g, '');
+    // match 081234... or +62/62 prefix variants
+    const variants = Array.from(
+      new Set([
+        digits,
+        digits.startsWith('0') ? `62${digits.slice(1)}` : digits,
+        digits.startsWith('62') ? `0${digits.slice(2)}` : digits,
+      ]),
+    );
+    const results = await this.pengkurbanRepository.find({
+      where: variants.map((p) => ({ phone: p })),
+      order: { createdAt: 'DESC' },
+    });
+    return results.map((pk) => ({
+      id: pk.id,
+      registrationNumber: pk.registrationNumber,
+      name: pk.name,
+      animalType: pk.animalType,
+      status: pk.status,
+      createdAt: pk.createdAt,
+    }));
+  }
+
   async generateRegistrationNumber(
     eventId: string,
     attempt = 0,
