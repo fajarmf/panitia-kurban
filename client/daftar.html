@@ -215,8 +215,17 @@
           </div>
 
           <div class="form-group">
-            <label for="field-address">Alamat <span id="address-required-mark" class="required" style="display:none">*</span></label>
-            <input type="text" id="field-address" class="input-field" placeholder="contoh: M7/38">
+            <label>Alamat <span id="address-required-mark" class="required" style="display:none">*</span></label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+              <select id="field-cluster" class="input-field">
+                <option value="">-- Cluster --</option>
+                <option value="Margata">Margata</option>
+                <option value="Nahara">Nahara</option>
+                <option value="Uenos">Uenos</option>
+                <option value="Umum">Umum / Lainnya</option>
+              </select>
+              <input type="text" id="field-street" class="input-field" placeholder="contoh: M7/38">
+            </div>
           </div>
 
           <div class="form-group">
@@ -227,8 +236,8 @@
           <div id="section-qurban" class="section-hidden">
             <div class="form-group">
               <label for="field-shohibul">Atas nama qurban (shohibul qurban)</label>
-              <textarea id="field-shohibul" class="input-field" rows="3" placeholder="Kosongkan jika sama dengan nama pendaftar. Untuk sapi kolektif (1/7), tulis 7 nama — satu nama per baris." style="resize:vertical"></textarea>
-              <div style="font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.4rem">Boleh diisi nama berbeda dari pendaftar. Sapi kolektif bisa diisi sampai 7 nama.</div>
+              <textarea id="field-shohibul" class="input-field" rows="3" placeholder="Contoh: Fajar bin Abdullah, Fatimah binti Fulan. Kosongkan jika sama dengan nama pendaftar. Untuk sapi kolektif (1/7), tulis 7 nama — satu nama per baris." style="resize:vertical"></textarea>
+              <div style="font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.4rem">Boleh diisi nama berbeda dari pendaftar (mis. Fajar bin Abdullah, Fatimah binti Fulan). Sapi kolektif bisa diisi sampai 7 nama.</div>
             </div>
 
             <div class="form-group">
@@ -561,7 +570,9 @@
       hideError();
 
       const name = document.getElementById('field-name').value.trim();
-      const address = document.getElementById('field-address').value.trim();
+      const cluster = document.getElementById('field-cluster').value;
+      const street = document.getElementById('field-street').value.trim();
+      const address = [cluster, street].filter(Boolean).join(' - ');
       const phone = document.getElementById('field-phone').value.trim();
       const proofFile = document.getElementById('field-proof').files[0];
 
@@ -569,7 +580,7 @@
       if (!name) return showError('Nama lengkap wajib diisi.');
 
       if (selectedMode === 'qurban') {
-        if (!address) return showError('Alamat wajib diisi untuk pendaftaran qurban.');
+        if (!cluster || !street) return showError('Alamat wajib diisi (pilih cluster dan isi nomor/detail jalan) untuk pendaftaran qurban.');
         if (!selectedAnimal) return showError('Pilih jenis hewan terlebih dahulu.');
         if ((selectedAnimal === 'DOMBA' || selectedAnimal === 'KAMBING') && !selectedTipe) {
           return showError('Pilih tipe hewan terlebih dahulu.');
