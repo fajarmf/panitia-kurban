@@ -98,10 +98,13 @@
         </div>
 
         <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.75rem">
-          <a href="/daftar.html" class="btn-primary" style="text-decoration:none;justify-content:center">
+          <a id="btn-cek-status" href="#" class="btn-primary" style="text-decoration:none;justify-content:center;display:none">
+            📋 Cek Status &amp; Upload Bukti Bayar
+          </a>
+          <a href="/daftar.html" class="btn-secondary" style="text-decoration:none;justify-content:center">
             Daftar Lagi
           </a>
-          <a href="/" class="btn-secondary" style="text-decoration:none;justify-content:center">
+          <a href="/" class="btn-secondary" style="text-decoration:none;justify-content:center;opacity:0.6">
             Kembali ke Beranda
           </a>
         </div>
@@ -138,6 +141,12 @@
     } else {
       document.getElementById('info-text').textContent =
         'Panitia akan memverifikasi pembayaran Anda dalam 1x24 jam. Simpan nomor registrasi di atas sebagai bukti pendaftaran.';
+    }
+
+    if (id && mode === 'qurban') {
+      const btnCek = document.getElementById('btn-cek-status');
+      btnCek.href = `/status.html?id=${encodeURIComponent(id)}`;
+      btnCek.style.display = 'flex';
     }
 
     if (regNum) {

@@ -54,6 +54,11 @@ export class PublicPengkurbanController {
     return this.pengkurbanService.attachPaymentProof(id, file);
   }
 
+  @Get('register/by-phone/:phone')
+  getByPhone(@Param('phone') phone: string) {
+    return this.pengkurbanService.findByPhone(phone);
+  }
+
   @Get('register/:id')
   getStatus(@Param('id', ParseUUIDPipe) id: string) {
     return this.pengkurbanService.findPublicStatus(id);
