@@ -169,6 +169,39 @@
       background: rgba(52,211,153,0.12);
     }
     .tipe-radio-input { display: none; }
+    .btn-status-top {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+    .btn-status-top:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    .btn-cek-status {
+      display: inline-block;
+      text-align: center;
+      width: 100%;
+      font-size: 0.85rem;
+      padding: 0.6rem;
+      background: rgba(52,211,153,0.15);
+      border: 1px solid rgba(52,211,153,0.4);
+      border-radius: 8px;
+      color: #34d399;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-cek-status:hover {
+      background: rgba(52,211,153,0.25);
+    }
   </style>
 </head>
 <body>
@@ -187,7 +220,17 @@
         <div style="font-weight:600;margin-bottom:0.5rem;color:#6ee7b7">🏦 Info Rekening Transfer</div>
         <div style="font-size:0.9rem">Bank Muamalat</div>
         <div style="font-size:1.1rem;font-weight:700;letter-spacing:0.05em;margin:0.25rem 0">12 1010 4479</div>
-        <div style="font-size:0.85rem;color:rgba(255,255,255,0.65)">a/n Masjid Al Hijrah CGE 11</div>
+        <div style="font-size:0.85rem;color:rgba(255,255,255,0.65);margin-bottom:1rem">a/n Masjid Al Hijrah CGE 11</div>
+        
+        <div style="border-top:1px solid rgba(52,211,153,0.3);padding-top:0.75rem">
+          <div style="font-weight:600;margin-bottom:0.4rem;font-size:0.85rem">⚠️ Perhatian:</div>
+          <ul style="list-style-type:disc;padding-left:1.25rem;font-size:0.8rem;color:rgba(255,255,255,0.85);margin-bottom:0.75rem;line-height:1.4">
+            <li>Hanya melakukan transfer ke nomor rekening di atas.</li>
+            <li>Lakukan konfirmasi pembayaran dengan melampirkan bukti transfer pada formulir di bawah.</li>
+            <li>Jika ingin melihat status pendaftaran, bisa klik tombol di bawah ini.</li>
+          </ul>
+          <a href="/status.html" class="btn-cek-status">Cek Status Pembayaran</a>
+        </div>
       </div>
 
       <div class="glass-card p-5" style="padding:1.5rem">
