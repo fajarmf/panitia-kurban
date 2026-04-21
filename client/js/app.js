@@ -22,7 +22,7 @@ function clearAuth() {
 
 function requireAuth() {
   if (!getToken()) {
-    window.location.href = '/';
+    window.location.href = '/login.html';
     return false;
   }
   return true;
@@ -45,7 +45,7 @@ async function api(endpoint, options = {}) {
     const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
     if (res.status === 401) {
       clearAuth();
-      window.location.href = '/';
+      window.location.href = '/login.html';
       return null;
     }
     const contentType = res.headers.get('content-type');
@@ -160,7 +160,7 @@ function initSidebar(activePage) {
 
 function logout() {
   clearAuth();
-  window.location.href = '/';
+  window.location.href = '/login.html';
 }
 
 // ===== Mobile sidebar toggle =====
