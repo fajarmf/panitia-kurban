@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsNumber, Min, Matches } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export class CreateDonationDto {
@@ -11,6 +11,9 @@ export class CreateDonationDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^(08[0-9]{8,11}|\+[1-9][0-9]{9,14})$/, {
+    message: 'Nomor HP tidak valid. Gunakan format 08... (10-13 digit) atau +<kode negara>...',
+  })
   phone?: string;
 
   @IsOptional()
