@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pendaftaran Qurban & Sumbangan - Masjid Al Hijrah CGE 11</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .public-container {
+      min-height: 100vh;
+      padding: 1.5rem 1rem;
+      position: relative;
+      z-index: 1;
+    }
+    .public-card {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 0.5rem;
+    }
+    .form-group label .required {
+      color: #f87171;
+      margin-left: 2px;
+    }
+    .mode-radio-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .mode-radio-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1.25rem 1rem;
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-align: center;
+    }
+    .mode-radio-label .mode-icon {
+      font-size: 2rem;
+    }
+    .mode-radio-label:hover {
+      border-color: rgba(52,211,153,0.5);
+      background: rgba(52,211,153,0.08);
+    }
+    .mode-radio-label.selected {
+      border-color: #34d399;
+      background: rgba(52,211,153,0.15);
+      box-shadow: 0 0 0 3px rgba(52,211,153,0.15);
+    }
+    .mode-radio-input {
+      display: none;
+    }
+    .info-box {
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      font-size: 0.875rem;
+    }
+    .info-box.warning {
+      background: rgba(251,191,36,0.1);
+      border-color: rgba(251,191,36,0.3);
+    }
+    .info-box.danger {
+      background: rgba(248,113,113,0.1);
+      border-color: rgba(248,113,113,0.3);
+    }
+    .price-breakdown {
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      font-size: 0.875rem;
+    }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 0;
+      color: rgba(255,255,255,0.8);
+    }
+    .price-row.total {
+      border-top: 1px solid rgba(255,255,255,0.15);
+      margin-top: 0.5rem;
+      padding-top: 0.75rem;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #6ee7b7;
+    }
+    .section-hidden { display: none; }
+    .file-upload-area {
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    .file-upload-area:hover, .file-upload-area.dragover {
+      border-color: #34d399;
+      background: rgba(52,211,153,0.05);
+    }
+    #proof-preview {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 10px;
+      margin-top: 0.75rem;
+      display: none;
+      object-fit: contain;
+    }
+    .error-box {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 10px;
+      padding: 0.875rem 1rem;
+      font-size: 0.875rem;
+      color: #fca5a5;
+      display: none;
+      margin-bottom: 1rem;
+    }
+    .site-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .site-header h1 {
+      font-size: 1.375rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+    .site-header p {
+      color: rgba(255,255,255,0.65);
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+    .tipe-radio-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .tipe-radio-label {
+      padding: 0.5rem 0.875rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.06);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s;
+    }
+    .tipe-radio-label:hover {
+      border-color: rgba(52,211,153,0.5);
+    }
+    .tipe-radio-label.selected {
+      border-color: #34d399;
+      background: rgba(52,211,153,0.12);
+    }
+    .tipe-radio-input { display: none; }
+  </style>
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="public-container">
+    <div class="public-card">
+      <div class="site-header">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem">🕌</div>
+        <h1>Masjid Al Hijrah CGE 11</h1>
+        <p>Pendaftaran Qurban &amp; Sumbangan Idul Adha 1447 H</p>
+      </div>
+
+      <div class="glass-card p-4 mb-4 info-box" style="margin-bottom:1.25rem">
+        <div style="font-weight:600;margin-bottom:0.5rem;color:#6ee7b7">🏦 Info Rekening Transfer</div>
+        <div style="font-size:0.9rem">Bank Muamalat</div>
+        <div style="font-size:1.1rem;font-weight:700;letter-spacing:0.05em;margin:0.25rem 0">12 1010 4479</div>
+        <div style="font-size:0.85rem;color:rgba(255,255,255,0.65)">a/n Masjid Al Hijrah CGE 11</div>
+      </div>
+
+      <div class="glass-card p-5" style="padding:1.5rem">
+        <form id="daftar-form" novalidate>
+
+          <div class="form-group">
+            <label>Pilih jenis pendaftaran <span class="required">*</span></label>
+            <div class="mode-radio-group">
+              <label class="mode-radio-label" id="label-qurban">
+                <input type="radio" name="mode" value="qurban" class="mode-radio-input" id="mode-qurban">
+                <span class="mode-icon">🐄</span>
+                <span>Daftar Qurban</span>
+              </label>
+              <label class="mode-radio-label" id="label-sumbangan">
+                <input type="radio" name="mode" value="sumbangan" class="mode-radio-input" id="mode-sumbangan">
+                <span class="mode-icon">🤲</span>
+                <span>Sumbangan Seikhlasnya</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="field-name">Nama lengkap <span class="required">*</span></label>
+            <input type="text" id="field-name" class="input-field" placeholder="Nama lengkap / Hamba Allah" required>
+          </div>
+
+          <div class="form-group">
+            <label for="field-address">Alamat <span id="address-required-mark" class="required" style="display:none">*</span></label>
+            <input type="text" id="field-address" class="input-field" placeholder="contoh: M7/38">
+          </div>
+
+          <div class="form-group">
+            <label for="field-phone">No. HP (WhatsApp)</label>
+            <input type="tel" id="field-phone" class="input-field" placeholder="08xxxxxxxxxx">
+          </div>
+
+          <div id="section-qurban" class="section-hidden">
+            <div class="form-group">
+              <label for="field-shohibul">Atas nama qurban (shohibul qurban)</label>
+              <textarea id="field-shohibul" class="input-field" rows="3" placeholder="Kosongkan jika sama dengan nama pendaftar. Untuk sapi kolektif (1/7), tulis 7 nama — satu nama per baris." style="resize:vertical"></textarea>
+              <div style="font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.4rem">Boleh diisi nama berbeda dari pendaftar. Sapi kolektif bisa diisi sampai 7 nama.</div>
+            </div>
+
+            <div class="form-group">
+              <label for="field-animal">Jenis hewan <span class="required">*</span></label>
+              <select id="field-animal" class="input-field">
+                <option value="">-- Pilih jenis hewan --</option>
+                <option value="DOMBA">Domba</option>
+                <option value="KAMBING">Kambing</option>
+                <option value="SAPI_KOLEKTIF">Sapi Kolektif (1/7)</option>
+                <option value="SAPI_PERORANGAN">Sapi Perorangan</option>
+              </select>
+            </div>
+
+            <div id="section-tipe-domba-kambing" class="form-group section-hidden">
+              <label>Tipe hewan <span class="required">*</span></label>
+              <div class="tipe-radio-group" id="tipe-options"></div>
+            </div>
+
+            <div id="section-sapi-kolektif" class="form-group section-hidden">
+              <div class="info-box warning">
+                <div style="font-weight:600;margin-bottom:0.25rem">Sapi Kolektif — 1/7 slot</div>
+                <div id="kolektif-price-info">Biaya per orang: <strong>Rp 4.000.000</strong></div>
+                <div style="font-size:0.8rem;color:rgba(255,255,255,0.65);margin-top:0.25rem">Sapi Bali 350-400 kg, 7 orang per ekor</div>
+              </div>
+            </div>
+
+            <div id="section-sapi-perorangan" class="form-group section-hidden">
+              <label for="field-berat-sapi">Estimasi berat sapi (kg) <span class="required">*</span></label>
+              <input type="number" id="field-berat-sapi" class="input-field" placeholder="contoh: 350" min="100" max="700">
+              <div style="font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.4rem" id="sapi-price-note">Kisaran harga Rp 65.000 – 80.000/kg</div>
+            </div>
+
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="field-bawa-sendiri" style="width:auto;margin-right:6px;accent-color:#34d399">
+                Bawa hewan sendiri (tidak beli via panitia)
+              </label>
+            </div>
+
+            <div id="price-breakdown" class="price-breakdown section-hidden" style="margin-bottom:1.25rem">
+              <div id="price-row-hewan" class="price-row">
+                <span>Harga hewan (via panitia)</span>
+                <span id="price-hewan-val">-</span>
+              </div>
+              <div class="price-row">
+                <span>Infaq operasional</span>
+                <span id="price-infaq-val">-</span>
+              </div>
+              <div class="price-row total">
+                <span>Total wajib</span>
+                <span id="price-total-val">-</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="field-extra-donation">Sumbangan tambahan seikhlasnya (opsional)</label>
+              <input type="number" id="field-extra-donation" class="input-field" placeholder="0" min="0">
+            </div>
+
+            <div id="grand-total-row" class="price-breakdown section-hidden" style="margin-bottom:1.25rem">
+              <div class="price-row total" style="border-top:none;padding-top:0">
+                <span>Grand Total</span>
+                <span id="grand-total-val">-</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="field-notes-qurban">Catatan</label>
+              <textarea id="field-notes-qurban" class="input-field" rows="2" placeholder="Catatan tambahan (opsional)" style="resize:vertical"></textarea>
+            </div>
+          </div>
+
+          <div id="section-sumbangan" class="section-hidden">
+            <div class="form-group">
+              <label for="field-amount">Nominal sumbangan (Rp) <span class="required">*</span></label>
+              <input type="number" id="field-amount" class="input-field" placeholder="Contoh: 100000" min="0">
+            </div>
+            <div class="form-group">
+              <label for="field-notes-sumbangan">Pesan / catatan</label>
+              <textarea id="field-notes-sumbangan" class="input-field" rows="3" placeholder="Pesan atau catatan (opsional)" style="resize:vertical"></textarea>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Upload bukti transfer</label>
+            <div class="file-upload-area" id="upload-area" onclick="document.getElementById('field-proof').click()">
+              <div>📎 Klik untuk pilih gambar</div>
+              <div style="font-size:0.8rem;color:rgba(255,255,255,0.45);margin-top:0.25rem">JPEG, PNG, WebP — maks 5 MB</div>
+              <img id="proof-preview" alt="Preview bukti transfer">
+            </div>
+            <input type="file" id="field-proof" accept="image/jpeg,image/png,image/webp" style="display:none">
+          </div>
+
+          <div class="error-box" id="error-box"></div>
+
+          <button type="submit" class="btn-primary" style="width:100%;font-size:1rem;padding:14px" id="submit-btn">
+            Kirim Pendaftaran
+          </button>
+        </form>
+      </div>
+
+      <div style="text-align:center;margin-top:1rem;font-size:0.8rem;color:rgba(255,255,255,0.4)">
+        Panitia Kurban Masjid Al Hijrah CGE 11 &bull; Idul Adha 1447 H
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let pricing = null;
+    let selectedMode = null;
+    let selectedAnimal = null;
+    let selectedTipe = null;
+    let bawaSendiri = false;
+
+    const TIPE_OPTIONS = {
+      DOMBA: ['Tipe A', 'Tipe B', 'Tipe C', 'Super', 'Istimewa', 'Bawa sendiri'],
+      KAMBING: ['Tipe A', 'Tipe B', 'Tipe C', 'Super', 'Istimewa', 'Bawa sendiri'],
+    };
+
+    async function loadPricing() {
+      try {
+        const res = await fetch('/api/public/pricing');
+        pricing = await res.json();
+      } catch (e) {
+        console.error('Gagal memuat data harga', e);
+      }
+    }
+
+    function formatRp(n) {
+      if (n == null || isNaN(n)) return '-';
+      return 'Rp ' + Number(n).toLocaleString('id-ID');
+    }
+
+    function setMode(mode) {
+      selectedMode = mode;
+      document.getElementById('label-qurban').classList.toggle('selected', mode === 'qurban');
+      document.getElementById('label-sumbangan').classList.toggle('selected', mode === 'sumbangan');
+      document.getElementById('section-qurban').classList.toggle('section-hidden', mode !== 'qurban');
+      document.getElementById('section-sumbangan').classList.toggle('section-hidden', mode !== 'sumbangan');
+      const addrRequired = document.getElementById('address-required-mark');
+      addrRequired.style.display = mode === 'qurban' ? '' : 'none';
+      if (mode !== 'qurban') {
+        document.getElementById('price-breakdown').classList.add('section-hidden');
+        document.getElementById('grand-total-row').classList.add('section-hidden');
+      }
+    }
+
+    function setAnimal(animal) {
+      selectedAnimal = animal;
+      selectedTipe = null;
+      ['section-tipe-domba-kambing','section-sapi-kolektif','section-sapi-perorangan'].forEach(id => {
+        document.getElementById(id).classList.add('section-hidden');
+      });
+      if (animal === 'DOMBA' || animal === 'KAMBING') {
+        buildTipeOptions(animal);
+        document.getElementById('section-tipe-domba-kambing').classList.remove('section-hidden');
+      } else if (animal === 'SAPI_KOLEKTIF') {
+        if (pricing) {
+          const info = pricing.sapiKolektif;
+          document.getElementById('kolektif-price-info').innerHTML =
+            `Biaya per orang: <strong>${formatRp(info.perOrang)}</strong>`;
+        }
+        document.getElementById('section-sapi-kolektif').classList.remove('section-hidden');
+      } else if (animal === 'SAPI_PERORANGAN') {
+        if (pricing) {
+          const info = pricing.sapiPerorangan;
+          document.getElementById('sapi-price-note').textContent =
+            `Kisaran harga Rp ${Number(info.pricePerKg.min).toLocaleString('id-ID')} – ${Number(info.pricePerKg.max).toLocaleString('id-ID')}/kg`;
+        }
+        document.getElementById('section-sapi-perorangan').classList.remove('section-hidden');
+      }
+      updatePriceBreakdown();
+    }
+
+    function buildTipeOptions(animal) {
+      const container = document.getElementById('tipe-options');
+      const options = TIPE_OPTIONS[animal] || [];
+      container.innerHTML = '';
+      options.forEach(tipe => {
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = 'tipe';
+        input.value = tipe;
+        input.className = 'tipe-radio-input';
+        input.id = `tipe-${tipe}`;
+
+        const label = document.createElement('label');
+        label.className = 'tipe-radio-label';
+        label.setAttribute('for', `tipe-${tipe}`);
+        label.textContent = tipe;
+
+        input.addEventListener('change', () => {
+          document.querySelectorAll('.tipe-radio-label').forEach(l => l.classList.remove('selected'));
+          label.classList.add('selected');
+          selectedTipe = tipe;
+          updatePriceBreakdown();
+        });
+
+        container.appendChild(input);
+        container.appendChild(label);
+      });
+    }
+
+    function getAnimalPrice() {
+      if (!pricing || !selectedAnimal || !selectedTipe || bawaSendiri) return null;
+      if (selectedTipe === 'Bawa sendiri') return 0;
+
+      const keyMap = { DOMBA: 'domba', KAMBING: 'kambing' };
+      const key = keyMap[selectedAnimal];
+      if (!key) return null;
+
+      const list = pricing[key] || [];
+      const found = list.find(item => item.size === selectedTipe);
+      if (!found) return null;
+      if (found.price) return found.price;
+      if (found.priceMin) return found.priceMin;
+      return null;
+    }
+
+    function getInfaqAmount() {
+      if (!pricing) return 300000;
+      if (selectedAnimal === 'SAPI_PERORANGAN') return pricing.infaqOperasional.sapiPerorangan;
+      return pricing.infaqOperasional.dombaKambing;
+    }
+
+    function updatePriceBreakdown() {
+      if (!selectedAnimal) {
+        document.getElementById('price-breakdown').classList.add('section-hidden');
+        document.getElementById('grand-total-row').classList.add('section-hidden');
+        return;
+      }
+
+      if (selectedAnimal === 'SAPI_KOLEKTIF') {
+        document.getElementById('price-breakdown').classList.add('section-hidden');
+        document.getElementById('grand-total-row').classList.add('section-hidden');
+        return;
+      }
+
+      if (selectedAnimal === 'SAPI_PERORANGAN') {
+        const berat = parseFloat(document.getElementById('field-berat-sapi').value) || 0;
+        const infaq = getInfaqAmount();
+        const hevanMin = berat * (pricing ? pricing.sapiPerorangan.pricePerKg.min : 65000);
+        const hevanMax = berat * (pricing ? pricing.sapiPerorangan.pricePerKg.max : 80000);
+
+        document.getElementById('price-breakdown').classList.remove('section-hidden');
+        const hevanRow = document.getElementById('price-row-hewan');
+
+        if (!bawaSendiri && berat > 0) {
+          hevanRow.style.display = '';
+          document.getElementById('price-hewan-val').textContent =
+            `${formatRp(hevanMin)} – ${formatRp(hevanMax)}`;
+          document.getElementById('price-infaq-val').textContent = formatRp(infaq);
+          document.getElementById('price-total-val').textContent =
+            `${formatRp(hevanMin + infaq)} – ${formatRp(hevanMax + infaq)}`;
+        } else if (bawaSendiri) {
+          hevanRow.style.display = 'none';
+          document.getElementById('price-infaq-val').textContent = formatRp(infaq);
+          document.getElementById('price-total-val').textContent = formatRp(infaq);
+        } else {
+          hevanRow.style.display = '';
+          document.getElementById('price-hewan-val').textContent = '-';
+          document.getElementById('price-infaq-val').textContent = formatRp(infaq);
+          document.getElementById('price-total-val').textContent = '-';
+        }
+        document.getElementById('grand-total-row').classList.add('section-hidden');
+        return;
+      }
+
+      if (selectedAnimal === 'DOMBA' || selectedAnimal === 'KAMBING') {
+        if (!selectedTipe) {
+          document.getElementById('price-breakdown').classList.add('section-hidden');
+          document.getElementById('grand-total-row').classList.add('section-hidden');
+          return;
+        }
+        const infaq = getInfaqAmount();
+        const hevanPrice = getAnimalPrice();
+        const hevanRow = document.getElementById('price-row-hewan');
+
+        document.getElementById('price-breakdown').classList.remove('section-hidden');
+
+        if (bawaSendiri || selectedTipe === 'Bawa sendiri') {
+          hevanRow.style.display = 'none';
+          document.getElementById('price-infaq-val').textContent = formatRp(infaq);
+          document.getElementById('price-total-val').textContent = formatRp(infaq);
+        } else if (selectedTipe === 'Istimewa') {
+          hevanRow.style.display = '';
+          document.getElementById('price-hewan-val').textContent = 'Hubungi panitia';
+          document.getElementById('price-infaq-val').textContent = formatRp(infaq);
+          document.getElementById('price-total-val').textContent = '-';
+        } else {
+          hevanRow.style.display = '';
+          document.getElementById('price-hewan-val').textContent = formatRp(hevanPrice);
+          document.getElementById('price-infaq-val').textContent = formatRp(infaq);
+          const total = (hevanPrice || 0) + infaq;
+          document.getElementById('price-total-val').textContent = formatRp(total);
+
+          const extra = parseFloat(document.getElementById('field-extra-donation').value) || 0;
+          if (extra > 0) {
+            document.getElementById('grand-total-row').classList.remove('section-hidden');
+            document.getElementById('grand-total-val').textContent = formatRp(total + extra);
+          } else {
+            document.getElementById('grand-total-row').classList.add('section-hidden');
+          }
+        }
+        return;
+      }
+
+      document.getElementById('price-breakdown').classList.add('section-hidden');
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('error-box');
+      box.textContent = msg;
+      box.style.display = 'block';
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function hideError() {
+      document.getElementById('error-box').style.display = 'none';
+    }
+
+    function setSubmitting(flag) {
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = flag;
+      btn.textContent = flag ? 'Mengirim...' : 'Kirim Pendaftaran';
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      hideError();
+
+      const name = document.getElementById('field-name').value.trim();
+      const address = document.getElementById('field-address').value.trim();
+      const phone = document.getElementById('field-phone').value.trim();
+      const proofFile = document.getElementById('field-proof').files[0];
+
+      if (!selectedMode) return showError('Pilih jenis pendaftaran terlebih dahulu.');
+      if (!name) return showError('Nama lengkap wajib diisi.');
+
+      if (selectedMode === 'qurban') {
+        if (!address) return showError('Alamat wajib diisi untuk pendaftaran qurban.');
+        if (!selectedAnimal) return showError('Pilih jenis hewan terlebih dahulu.');
+        if ((selectedAnimal === 'DOMBA' || selectedAnimal === 'KAMBING') && !selectedTipe) {
+          return showError('Pilih tipe hewan terlebih dahulu.');
+        }
+        if (selectedAnimal === 'SAPI_PERORANGAN') {
+          const berat = parseFloat(document.getElementById('field-berat-sapi').value);
+          if (!bawaSendiri && (!berat || berat < 100)) {
+            return showError('Masukkan estimasi berat sapi (minimal 100 kg).');
+          }
+        }
+        await submitQurban(name, address, phone, proofFile);
+      } else {
+        const amount = parseFloat(document.getElementById('field-amount').value);
+        if (!amount || amount < 0) return showError('Masukkan nominal sumbangan.');
+        await submitSumbangan(name, address, phone, amount, proofFile);
+      }
+    }
+
+    function getAnimalTypeForApi() {
+      const map = {
+        DOMBA: 'DOMBA',
+        KAMBING: 'KAMBING',
+        SAPI_KOLEKTIF: 'SAPI',
+        SAPI_PERORANGAN: 'SAPI',
+      };
+      return map[selectedAnimal] || selectedAnimal;
+    }
+
+    function getPurchaseTypeForApi() {
+      if (bawaSendiri || selectedTipe === 'Bawa sendiri') return 'BAWA_SENDIRI';
+      return 'BELI_MASJID';
+    }
+
+    function buildAnimalSizeString() {
+      if (selectedAnimal === 'SAPI_KOLEKTIF') return 'Kolektif 1/7';
+      if (selectedAnimal === 'SAPI_PERORANGAN') {
+        const berat = document.getElementById('field-berat-sapi').value;
+        return berat ? `${berat} kg` : '';
+      }
+      return selectedTipe || '';
+    }
+
+    function computePrice() {
+      if (bawaSendiri || selectedTipe === 'Bawa sendiri') return null;
+      if (selectedAnimal === 'SAPI_KOLEKTIF') return pricing ? pricing.sapiKolektif.perOrang : 4000000;
+      if (selectedAnimal === 'SAPI_PERORANGAN') {
+        const berat = parseFloat(document.getElementById('field-berat-sapi').value) || 0;
+        return berat > 0 && pricing ? berat * pricing.sapiPerorangan.pricePerKg.min : null;
+      }
+      return getAnimalPrice();
+    }
+
+    async function submitQurban(name, address, phone, proofFile) {
+      setSubmitting(true);
+      try {
+        const notes = document.getElementById('field-notes-qurban').value.trim();
+        const shohibulName = document.getElementById('field-shohibul').value.trim();
+        const extra = parseFloat(document.getElementById('field-extra-donation').value) || 0;
+        const allNotes = [
+          notes,
+          extra > 0 ? `Sumbangan tambahan: Rp ${Number(extra).toLocaleString('id-ID')}` : '',
+        ].filter(Boolean).join('\n');
+
+        const body = {
+          name,
+          address,
+          phone: phone || undefined,
+          animalType: getAnimalTypeForApi(),
+          purchaseType: getPurchaseTypeForApi(),
+          animalSize: buildAnimalSizeString() || undefined,
+          shohibulName: shohibulName || undefined,
+          price: computePrice() || undefined,
+          notes: allNotes || undefined,
+        };
+
+        const reg = await fetch('/api/public/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const regData = await reg.json();
+        if (!reg.ok) throw new Error(regData.message || 'Gagal mendaftar');
+
+        if (proofFile) {
+          const fd = new FormData();
+          fd.append('paymentProof', proofFile);
+          const upRes = await fetch(`/api/public/register/${regData.id}/payment-proof`, {
+            method: 'POST',
+            body: fd,
+          });
+          if (!upRes.ok) {
+            const upData = await upRes.json();
+            console.warn('Upload bukti gagal:', upData.message);
+          }
+        }
+
+        const params = new URLSearchParams({
+          regNum: regData.registrationNumber,
+          id: regData.id,
+          mode: 'qurban',
+          name,
+          animal: selectedAnimal,
+          tipe: buildAnimalSizeString(),
+        });
+        window.location.href = `/daftar-success.html?${params.toString()}`;
+      } catch (err) {
+        showError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
+        setSubmitting(false);
+      }
+    }
+
+    async function submitSumbangan(name, address, phone, amount, proofFile) {
+      setSubmitting(true);
+      try {
+        const notes = document.getElementById('field-notes-sumbangan').value.trim();
+        const fd = new FormData();
+        fd.append('name', name);
+        if (address) fd.append('address', address);
+        if (phone) fd.append('phone', phone);
+        fd.append('amount', String(amount));
+        if (notes) fd.append('notes', notes);
+        if (proofFile) fd.append('paymentProof', proofFile);
+
+        const res = await fetch('/api/public/donate', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Gagal mengirim sumbangan');
+
+        const params = new URLSearchParams({
+          id: data.id,
+          mode: 'sumbangan',
+          name,
+          amount: String(amount),
+        });
+        window.location.href = `/daftar-success.html?${params.toString()}`;
+      } catch (err) {
+        showError(err.message || 'Terjadi kesalahan. Silakan coba lagi.');
+        setSubmitting(false);
+      }
+    }
+
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+      radio.addEventListener('change', () => setMode(radio.value));
+    });
+    document.querySelectorAll('.mode-radio-label').forEach(label => {
+      label.addEventListener('click', () => {
+        const input = label.querySelector('input[type="radio"]');
+        if (input) { input.checked = true; setMode(input.value); }
+      });
+    });
+
+    document.getElementById('field-animal').addEventListener('change', e => {
+      setAnimal(e.target.value);
+    });
+
+    document.getElementById('field-bawa-sendiri').addEventListener('change', e => {
+      bawaSendiri = e.target.checked;
+      updatePriceBreakdown();
+    });
+
+    document.getElementById('field-berat-sapi').addEventListener('input', () => {
+      updatePriceBreakdown();
+    });
+
+    document.getElementById('field-extra-donation').addEventListener('input', () => {
+      updatePriceBreakdown();
+    });
+
+    document.getElementById('field-proof').addEventListener('change', e => {
+      const file = e.target.files[0];
+      const preview = document.getElementById('proof-preview');
+      if (file) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+        preview.src = '';
+      }
+    });
+
+    document.getElementById('daftar-form').addEventListener('submit', handleSubmit);
+
+    loadPricing();
+  </script>
+</body>
+</html>

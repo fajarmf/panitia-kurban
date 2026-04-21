@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pendaftaran Berhasil - Masjid Al Hijrah CGE 11</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .success-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+    .success-card {
+      max-width: 520px;
+      width: 100%;
+      text-align: center;
+    }
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #059669, #10b981);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.25rem;
+      font-size: 2.25rem;
+      box-shadow: 0 8px 24px rgba(5, 150, 105, 0.4);
+    }
+    .reg-number {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      color: #6ee7b7;
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.25);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      margin: 1rem 0;
+      display: inline-block;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.875rem;
+    }
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+    .detail-label {
+      color: rgba(255,255,255,0.55);
+    }
+    .detail-value {
+      font-weight: 500;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+
+  <div class="success-container">
+    <div class="success-card">
+      <div class="glass-card" style="padding:2rem">
+        <div class="success-icon">✓</div>
+
+        <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:0.375rem" id="success-title">
+          Pendaftaran Terkirim!
+        </h1>
+        <p style="color:rgba(255,255,255,0.6);font-size:0.9rem" id="success-subtitle">
+          Terima kasih telah mendaftar
+        </p>
+
+        <div id="reg-num-section" style="display:none">
+          <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:1.25rem">Nomor Registrasi</div>
+          <div class="reg-number" id="reg-number-display">—</div>
+          <p style="font-size:0.8rem;color:rgba(255,255,255,0.4)">Simpan nomor ini untuk pengecekan status</p>
+        </div>
+
+        <div id="summary-section" style="margin-top:1.25rem;text-align:left" class="glass-card" style="padding:1rem">
+          <div id="summary-rows" style="padding:0.75rem 1rem"></div>
+        </div>
+
+        <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:12px;padding:1rem;margin-top:1.25rem;font-size:0.85rem;text-align:left">
+          <div style="font-weight:600;color:#fbbf24;margin-bottom:0.35rem">ℹ️ Informasi Verifikasi</div>
+          <div style="color:rgba(255,255,255,0.75)">
+            Panitia akan memverifikasi pembayaran Anda dalam 1x24 jam.
+            Status pendaftaran dapat dicek dengan mengunjungi kembali link pendaftaran menggunakan nomor registrasi di atas.
+          </div>
+        </div>
+
+        <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.75rem">
+          <a href="/daftar.html" class="btn-primary" style="text-decoration:none;justify-content:center">
+            Daftar Lagi
+          </a>
+          <a href="/" class="btn-secondary" style="text-decoration:none;justify-content:center">
+            Kembali ke Beranda
+          </a>
+        </div>
+      </div>
+
+      <div style="text-align:center;margin-top:1rem;font-size:0.78rem;color:rgba(255,255,255,0.35)">
+        Masjid Al Hijrah CGE 11 &bull; Idul Adha 1447 H
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    const name = params.get('name');
+    const regNum = params.get('regNum');
+    const id = params.get('id');
+    const amount = params.get('amount');
+    const animal = params.get('animal');
+    const tipe = params.get('tipe');
+
+    const animalLabels = {
+      DOMBA: 'Domba',
+      KAMBING: 'Kambing',
+      SAPI_KOLEKTIF: 'Sapi Kolektif (1/7)',
+      SAPI_PERORANGAN: 'Sapi Perorangan',
+    };
+
+    if (mode === 'sumbangan') {
+      document.getElementById('success-title').textContent = 'Sumbangan Terkirim!';
+      document.getElementById('success-subtitle').textContent = 'Terima kasih atas sumbangan Anda';
+    }
+
+    if (regNum) {
+      document.getElementById('reg-num-section').style.display = 'block';
+      document.getElementById('reg-number-display').textContent = regNum;
+    }
+
+    const rows = [];
+    if (name) rows.push({ label: 'Nama', value: name });
+    if (mode === 'qurban') {
+      if (animal) rows.push({ label: 'Jenis Hewan', value: animalLabels[animal] || animal });
+      if (tipe) rows.push({ label: 'Tipe / Keterangan', value: tipe });
+      rows.push({ label: 'Status', value: 'Menunggu Pembayaran' });
+    } else if (mode === 'sumbangan') {
+      if (amount) {
+        rows.push({
+          label: 'Nominal',
+          value: 'Rp ' + Number(amount).toLocaleString('id-ID'),
+        });
+      }
+      rows.push({ label: 'Status', value: 'Menunggu Verifikasi' });
+    }
+
+    const container = document.getElementById('summary-rows');
+    rows.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'detail-row';
+      div.innerHTML = `<span class="detail-label">${row.label}</span><span class="detail-value">${row.value}</span>`;
+      container.appendChild(div);
+    });
+  </script>
+</body>
+</html>

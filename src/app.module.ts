@@ -12,6 +12,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { SeedModule } from './seed/seed.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
+import { DonationsModule } from './donations/donations.module';
 
 import { AppController } from './app.controller';
 
@@ -22,19 +23,31 @@ const isProduction = process.env.NODE_ENV === 'production';
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
-      host: !process.env.DATABASE_URL ? (process.env.DB_HOST || 'localhost') : undefined,
-      port: !process.env.DATABASE_URL ? parseInt(process.env.DB_PORT || '5432', 10) : undefined,
-      username: !process.env.DATABASE_URL ? (process.env.DB_USERNAME || 'admin') : undefined,
-      password: !process.env.DATABASE_URL ? (process.env.DB_PASSWORD || 'admin123') : undefined,
-      database: !process.env.DATABASE_URL ? (process.env.DB_NAME || 'panitia_kurban') : undefined,
+      host: !process.env.DATABASE_URL
+        ? process.env.DB_HOST || 'localhost'
+        : undefined,
+      port: !process.env.DATABASE_URL
+        ? parseInt(process.env.DB_PORT || '5432', 10)
+        : undefined,
+      username: !process.env.DATABASE_URL
+        ? process.env.DB_USERNAME || 'admin'
+        : undefined,
+      password: !process.env.DATABASE_URL
+        ? process.env.DB_PASSWORD || 'admin123'
+        : undefined,
+      database: !process.env.DATABASE_URL
+        ? process.env.DB_NAME || 'panitia_kurban'
+        : undefined,
       autoLoadEntities: true,
       synchronize: true, // Auto-create tables in dev
       ssl: isProduction,
-      extra: isProduction ? {
-        ssl: {
-          rejectUnauthorized: false,
-        },
-      } : {},
+      extra: isProduction
+        ? {
+            ssl: {
+              rejectUnauthorized: false,
+            },
+          }
+        : {},
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'client'),
@@ -48,6 +61,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     DashboardModule,
     SeedModule,
     ActivityLogsModule,
+    DonationsModule,
   ],
   controllers: [AppController],
   providers: [
