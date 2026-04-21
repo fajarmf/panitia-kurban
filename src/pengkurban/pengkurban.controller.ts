@@ -17,6 +17,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { PengkurbanService } from './pengkurban.service';
 import { CreatePengkurbanDto, UpdatePengkurbanDto } from './dto/pengkurban.dto';
+import { VerifyRegistrationDto } from './dto/verify-registration.dto';
 
 @Controller('api/pengkurban')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -31,7 +32,10 @@ export class PengkurbanController {
 
   @Get('export')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
-  async exportCsv(@Query('eventId') eventId: string | undefined, @Res() res: Response) {
+  async exportCsv(
+    @Query('eventId') eventId: string | undefined,
+    @Res() res: Response,
+  ) {
     const csv = await this.pengkurbanService.exportCsv(eventId);
     res.header('Content-Type', 'text/csv');
     res.attachment('pengkurban.csv');
@@ -54,6 +58,12 @@ export class PengkurbanController {
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
   update(@Param('id') id: string, @Body() dto: UpdatePengkurbanDto) {
     return this.pengkurbanService.update(id, dto);
+  }
+
+  @Patch(':id/verify')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA)
+  verify(@Param('id') id: string, @Body() dto: VerifyRegistrationDto) {
+    return this.pengkurbanService.verify(id, dto);
   }
 
   @Delete(':id')

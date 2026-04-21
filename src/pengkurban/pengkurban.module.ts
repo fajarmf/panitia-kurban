@@ -3,11 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Pengkurban } from './pengkurban.entity';
 import { PengkurbanService } from './pengkurban.service';
 import { PengkurbanController } from './pengkurban.controller';
+import { PublicPengkurbanController } from './public-pengkurban.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Pengkurban])],
   providers: [PengkurbanService],
-  controllers: [PengkurbanController],
+  controllers: [PengkurbanController, PublicPengkurbanController],
   exports: [PengkurbanService],
 })
 export class PengkurbanModule {}
