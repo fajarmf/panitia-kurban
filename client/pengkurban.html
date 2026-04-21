@@ -83,7 +83,8 @@
           <select id="form-animal" class="input-field" required>
             <option value="DOMBA">Domba 🐑</option>
             <option value="KAMBING">Kambing 🐐</option>
-            <option value="SAPI_KOLEKTIF">Sapi Kolektif (1/7) 🐄</option>
+            <option value="SAPI_KOLEKTIF_A">Sapi Kolektif A — 350-400 kg 🐄</option>
+            <option value="SAPI_KOLEKTIF_B">Sapi Kolektif B — 320-350 kg 🐄</option>
             <option value="SAPI_PERORANGAN">Sapi Perorangan 🐄</option>
           </select>
         </div>
@@ -150,7 +151,9 @@
 
     const animalLabels = {
       SAPI: 'Sapi 🐄', KAMBING: 'Kambing 🐐', DOMBA: 'Domba 🐑',
-      SAPI_KOLEKTIF: 'Sapi Kolektif', SAPI_PERORANGAN: 'Sapi Perorangan',
+      SAPI_KOLEKTIF: 'Sapi Kolektif 🐄',
+      SAPI_KOLEKTIF_A: 'Sapi Kolektif A 🐄', SAPI_KOLEKTIF_B: 'Sapi Kolektif B 🐄',
+      SAPI_PERORANGAN: 'Sapi Perorangan 🐄',
     };
     const purchaseLabels = { BELI_MASJID: 'Beli via Masjid', BAWA_SENDIRI: 'Bawa Sendiri' };
     const statusLabels = {
@@ -320,6 +323,8 @@
         const groups = [
           { key: 'DOMBA', icon: '🐑', label: 'Domba' },
           { key: 'KAMBING', icon: '🐐', label: 'Kambing' },
+          { key: 'SAPI_KOLEKTIF_A', icon: '🐄', label: 'Sapi Kolektif A (350-400 kg)' },
+          { key: 'SAPI_KOLEKTIF_B', icon: '🐄', label: 'Sapi Kolektif B (320-350 kg)' },
           { key: 'SAPI_KOLEKTIF', icon: '🐄', label: 'Sapi Kolektif' },
           { key: 'SAPI_PERORANGAN', icon: '🐄', label: 'Sapi Perorangan' },
         ];
@@ -333,7 +338,8 @@
           if (!rows.length) return;
           const confirmed = rows.filter(d => d.status === 'CONFIRMED').length;
           totalConfirmed += confirmed;
-          const extra = g.key === 'SAPI_KOLEKTIF' ? ` — ${rows.length}/7 slot` : ` — ${rows.length} orang`;
+          const isKolektif = g.key === 'SAPI_KOLEKTIF' || g.key === 'SAPI_KOLEKTIF_A' || g.key === 'SAPI_KOLEKTIF_B';
+          const extra = isKolektif ? ` — ${rows.length}/7 slot` : ` — ${rows.length} orang`;
           lines.push(`${g.icon} *${g.label}*${extra}`);
           rows.forEach((d, i) => {
             const displayName = (d.shohibulName || d.name).split('\n')[0].trim();
