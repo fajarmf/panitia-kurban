@@ -1,0 +1,14 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Donation } from './donation.entity';
+import { DonationsService } from './donations.service';
+import { DonationsController } from './donations.controller';
+import { PublicDonationsController } from './public-donations.controller';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Donation])],
+  providers: [DonationsService],
+  controllers: [DonationsController, PublicDonationsController],
+  exports: [DonationsService],
+})
+export class DonationsModule {}
