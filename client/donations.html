@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sumbangan - Panitia Kurban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h1>🕌 Al Hijrah CGE</h1><p>Sistem Panitia Kurban</p></div>
+    <nav class="sidebar-nav"></nav>
+  </aside>
+  <nav class="bottom-nav" id="bottom-nav"><div class="bottom-nav-items"></div></nav>
+
+  <main class="main-content">
+    <div class="top-bar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" onclick="toggleSidebar()"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <h2>Data Sumbangan</h2>
+      </div>
+      <div class="user-info" id="user-info"></div>
+    </div>
+
+    <!-- Filters + stats row -->
+    <div class="flex flex-col sm:flex-row justify-between gap-3 mb-4">
+      <div class="flex gap-2 flex-wrap">
+        <select id="event-filter" class="input-field" style="max-width:280px" onchange="loadData()"></select>
+        <select id="status-filter" class="input-field" style="max-width:200px" onchange="loadData()">
+          <option value="">Semua Status</option>
+          <option value="PENDING_VERIFICATION">Menunggu Verifikasi</option>
+          <option value="CONFIRMED">Terverifikasi</option>
+          <option value="REJECTED">Ditolak</option>
+        </select>
+      </div>
+      <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
+    </div>
+
+    <!-- Total card -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4" id="summary-cards">
+      <div class="glass-card p-4 text-center">
+        <div class="text-2xl font-bold text-emerald-300" id="sum-total-nominal">—</div>
+        <div class="text-xs text-white/50 mt-1">Total Terverifikasi</div>
+      </div>
+      <div class="glass-card p-4 text-center">
+        <div class="text-2xl font-bold text-yellow-300" id="sum-pending">—</div>
+        <div class="text-xs text-white/50 mt-1">Menunggu Verifikasi</div>
+      </div>
+      <div class="glass-card p-4 text-center">
+        <div class="text-2xl font-bold text-white/70" id="sum-count">—</div>
+        <div class="text-xs text-white/50 mt-1">Total Penyumbang</div>
+      </div>
+    </div>
+
+    <div class="glass-card p-4">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>No. WA</th>
+              <th>Nominal</th>
+              <th>Bukti</th>
+              <th>Status</th>
+              <th>Waktu</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="data-table">
+            <tr><td colspan="7" class="text-center py-8"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Verify modal -->
+  <div class="modal-overlay" id="verify-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="verify-modal-title">Verifikasi Sumbangan</h3>
+        <button class="modal-close" onclick="closeVerifyModal()">✕</button>
+      </div>
+      <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none">
+        <p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>
+        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain">
+      </div>
+      <div class="form-group">
+        <label>Catatan (opsional)</label>
+        <textarea id="verify-notes" class="input-field" rows="2" placeholder="Catatan verifikasi"></textarea>
+      </div>
+      <input type="hidden" id="verify-id">
+      <div class="flex gap-3 mt-4">
+        <button type="button" class="btn-secondary flex-1" onclick="closeVerifyModal()">Batal</button>
+        <button type="button" class="btn-danger flex-1" onclick="submitVerify('REJECTED')">Tolak</button>
+        <button type="button" class="btn-primary flex-1" onclick="submitVerify('CONFIRMED')">✓ Konfirmasi</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    if (!requireAuth()) throw new Error('Not authenticated');
+    initSidebar('donations');
+
+    const statusLabels = {
+      PENDING_VERIFICATION: 'Menunggu Verifikasi',
+      CONFIRMED: 'Terverifikasi',
+      REJECTED: 'Ditolak',
+    };
+    const statusBadge = {
+      PENDING_VERIFICATION: 'badge-pending',
+      CONFIRMED: 'badge-active',
+      REJECTED: 'badge-rejected',
+    };
+
+    const urlStatus = new URLSearchParams(location.search).get('status');
+    if (urlStatus) document.getElementById('status-filter').value = urlStatus;
+
+    loadEventOptions('event-filter', true).then(() => loadData());
+
+    async function loadData() {
+      const eventId = document.getElementById('event-filter').value;
+      const status = document.getElementById('status-filter').value;
+      const params = new URLSearchParams();
+      if (eventId) params.set('eventId', eventId);
+      if (status) params.set('status', status);
+
+      try {
+        const [data, totals] = await Promise.all([
+          api(`/donations?${params}`),
+          api(`/donations/total${eventId ? '?eventId=' + eventId : ''}`),
+        ]);
+
+        // Summary
+        document.getElementById('sum-total-nominal').textContent =
+          totals.total != null ? 'Rp ' + Number(totals.total).toLocaleString('id-ID') : '—';
+        const pending = data.filter(d => d.status === 'PENDING_VERIFICATION').length;
+        document.getElementById('sum-pending').textContent = pending;
+        document.getElementById('sum-count').textContent = data.length;
+
+        const tbody = document.getElementById('data-table');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-emerald-300/40">Belum ada data sumbangan</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(d => {
+          const proofHtml = d.paymentProofPath
+            ? `<a href="/${d.paymentProofPath}" target="_blank" class="btn-secondary btn-sm">Lihat</a>`
+            : '<span class="text-white/30 text-xs">—</span>';
+
+          const canVerify = d.status === 'PENDING_VERIFICATION';
+          const verifyBtn = canVerify
+            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${JSON.stringify(d)})'>Verifikasi</button>`
+            : '';
+
+          return `<tr>
+            <td class="font-semibold">${escHtml(d.name)}</td>
+            <td>${escHtml(d.phone || '—')}</td>
+            <td>${d.amount != null ? 'Rp ' + Number(d.amount).toLocaleString('id-ID') : '<span class="text-white/30">Seikhlasnya</span>'}</td>
+            <td>${proofHtml}</td>
+            <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
+            <td class="text-xs text-white/50">${formatDate(d.createdAt)}</td>
+            <td><div class="flex gap-2">
+              ${verifyBtn}
+              <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
+            </div></td>
+          </tr>`;
+        }).join('');
+      } catch (err) {
+        showToast('Gagal memuat data: ' + err.message, 'error');
+      }
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+
+    function openVerifyModal(d) {
+      document.getElementById('verify-id').value = d.id;
+      document.getElementById('verify-modal-title').textContent = `Verifikasi — ${d.name}`;
+      document.getElementById('verify-notes').value = '';
+      const proofWrap = document.getElementById('verify-proof-wrap');
+      const proofImg = document.getElementById('verify-proof-img');
+      if (d.paymentProofPath) {
+        proofImg.src = '/' + d.paymentProofPath;
+        proofWrap.style.display = 'block';
+      } else {
+        proofWrap.style.display = 'none';
+      }
+      document.getElementById('verify-modal').classList.add('active');
+    }
+
+    function closeVerifyModal() {
+      document.getElementById('verify-modal').classList.remove('active');
+    }
+
+    async function submitVerify(status) {
+      const id = document.getElementById('verify-id').value;
+      const notes = document.getElementById('verify-notes').value.trim();
+      try {
+        await api(`/donations/${id}/verify`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, notes: notes || undefined }),
+        });
+        showToast(status === 'CONFIRMED' ? 'Sumbangan dikonfirmasi' : 'Sumbangan ditolak');
+        closeVerifyModal();
+        loadData();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function deleteData(id) {
+      if (!confirmAction('Yakin ingin menghapus data sumbangan ini?')) return;
+      try {
+        await api(`/donations/${id}`, { method: 'DELETE' });
+        showToast('Data dihapus');
+        loadData();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+    async function exportCsv() {
+      const eventId = document.getElementById('event-filter').value;
+      const params = eventId ? `?eventId=${eventId}` : '';
+      try {
+        const token = getToken();
+        const res = await fetch(`/api/donations/export${params}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Gagal export CSV');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'donations-export.csv'; a.click();
+        URL.revokeObjectURL(url);
+        showToast('Berhasil export CSV');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
