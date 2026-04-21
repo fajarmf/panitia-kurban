@@ -333,7 +333,8 @@
                 <option value="">-- Pilih jenis hewan --</option>
                 <option value="DOMBA">Domba</option>
                 <option value="KAMBING">Kambing</option>
-                <option value="SAPI_KOLEKTIF">Sapi Kolektif (1/7)</option>
+                <option value="SAPI_KOLEKTIF_A">Sapi Kolektif A — 350-400 kg (1/7)</option>
+                <option value="SAPI_KOLEKTIF_B">Sapi Kolektif B — 320-350 kg (1/7)</option>
                 <option value="SAPI_PERORANGAN">Sapi Perorangan</option>
               </select>
             </div>
@@ -487,11 +488,11 @@
       if (animal === 'DOMBA' || animal === 'KAMBING') {
         buildTipeOptions(animal);
         document.getElementById('section-tipe-domba-kambing').classList.remove('section-hidden');
-      } else if (animal === 'SAPI_KOLEKTIF') {
+      } else if (animal === 'SAPI_KOLEKTIF_A' || animal === 'SAPI_KOLEKTIF_B') {
         if (pricing) {
-          const info = pricing.sapiKolektif;
+          const opsi = animal === 'SAPI_KOLEKTIF_A' ? pricing.sapiKolektif.opsiA : pricing.sapiKolektif.opsiB;
           document.getElementById('kolektif-price-info').innerHTML =
-            `Biaya per orang: <strong>${formatRp(info.perOrang)}</strong>`;
+            `${opsi.label} (${opsi.beratSapi}) — Biaya per orang: <strong>${formatRp(opsi.perOrang)}</strong>`;
         }
         document.getElementById('section-sapi-kolektif').classList.remove('section-hidden');
       } else if (animal === 'SAPI_PERORANGAN') {
@@ -563,7 +564,7 @@
         return;
       }
 
-      if (selectedAnimal === 'SAPI_KOLEKTIF') {
+      if (selectedAnimal === 'SAPI_KOLEKTIF_A' || selectedAnimal === 'SAPI_KOLEKTIF_B') {
         document.getElementById('price-breakdown').classList.add('section-hidden');
         document.getElementById('grand-total-row').classList.add('section-hidden');
         return;
@@ -699,13 +700,7 @@
     }
 
     function getAnimalTypeForApi() {
-      const map = {
-        DOMBA: 'DOMBA',
-        KAMBING: 'KAMBING',
-        SAPI_KOLEKTIF: 'SAPI',
-        SAPI_PERORANGAN: 'SAPI',
-      };
-      return map[selectedAnimal] || selectedAnimal;
+      return selectedAnimal || '';
     }
 
     function getPurchaseTypeForApi() {
@@ -714,7 +709,8 @@
     }
 
     function buildAnimalSizeString() {
-      if (selectedAnimal === 'SAPI_KOLEKTIF') return 'Kolektif 1/7';
+      if (selectedAnimal === 'SAPI_KOLEKTIF_A') return 'Kolektif A — 1/7';
+      if (selectedAnimal === 'SAPI_KOLEKTIF_B') return 'Kolektif B — 1/7';
       if (selectedAnimal === 'SAPI_PERORANGAN') {
         const berat = document.getElementById('field-berat-sapi').value;
         return berat ? `${berat} kg` : '';
@@ -724,7 +720,8 @@
 
     function computePrice() {
       if (bawaSendiri || selectedTipe === 'Bawa sendiri') return null;
-      if (selectedAnimal === 'SAPI_KOLEKTIF') return pricing ? pricing.sapiKolektif.perOrang : 4000000;
+      if (selectedAnimal === 'SAPI_KOLEKTIF_A') return pricing ? pricing.sapiKolektif.opsiA.perOrang : 4000000;
+      if (selectedAnimal === 'SAPI_KOLEKTIF_B') return pricing ? pricing.sapiKolektif.opsiB.perOrang : 3500000;
       if (selectedAnimal === 'SAPI_PERORANGAN') {
         const berat = parseFloat(document.getElementById('field-berat-sapi').value) || 0;
         return berat > 0 && pricing ? berat * pricing.sapiPerorangan.pricePerKg.min : null;

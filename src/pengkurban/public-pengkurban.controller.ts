@@ -92,9 +92,9 @@ export class PublicPengkurbanController {
         { size: 'Istimewa', weight: '>100 kg', priceNote: 'hubungi panitia' },
       ],
       sapiKolektif: {
-        perOrang: 4000000,
+        opsiA: { perOrang: 4000000, beratSapi: '350-400 kg', label: 'Sapi A' },
+        opsiB: { perOrang: 3500000, beratSapi: '320-350 kg', label: 'Sapi B' },
         orangPerEkor: 7,
-        beratSapi: '350-400 kg',
         jenisSapi: 'Sapi Bali',
       },
       sapiPerorangan: {

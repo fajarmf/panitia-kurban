@@ -36,6 +36,7 @@
           <option value="REJECTED">Ditolak</option>
         </select>
       </div>
+      <button class="btn-secondary" onclick="openRekapModal()">📋 Rekap WA</button>
       <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
     </div>
 
@@ -76,6 +77,21 @@
       </div>
     </div>
   </main>
+
+  <!-- Rekap WA modal -->
+  <div class="modal-overlay" id="rekap-modal">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3>Rekap WA — Sumbangan</h3>
+        <button class="modal-close" onclick="closeRekapModal()">✕</button>
+      </div>
+      <textarea id="rekap-text" class="input-field" rows="14" readonly style="font-size:13px;line-height:1.6;font-family:monospace;resize:vertical"></textarea>
+      <div class="flex gap-3 mt-4">
+        <button type="button" class="btn-secondary flex-1" onclick="closeRekapModal()">Tutup</button>
+        <button type="button" class="btn-primary flex-1" onclick="salinRekap(this)">📋 Salin</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Verify modal -->
   <div class="modal-overlay" id="verify-modal">
@@ -229,6 +245,49 @@
       } catch (err) {
         showToast(err.message, 'error');
       }
+    }
+
+    async function openRekapModal() {
+      const eventId = document.getElementById('event-filter').value;
+      const params = new URLSearchParams();
+      if (eventId) params.set('eventId', eventId);
+      try {
+        const [data, totals] = await Promise.all([
+          api(`/donations?${params}`),
+          api(`/donations/total${eventId ? '?eventId=' + eventId : ''}`),
+        ]);
+        const active = data.filter(d => d.status !== 'REJECTED');
+        const confirmed = active.filter(d => d.status === 'CONFIRMED');
+
+        const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        let lines = [`*Rekap Sumbangan Idul Adha 1447H*`, `_per ${now}_`, ``];
+
+        lines.push(`*Daftar Penyumbang* (${active.length} orang)`);
+        active.forEach((d, i) => {
+          const nominal = d.amount != null ? ` — Rp ${Number(d.amount).toLocaleString('id-ID')}` : '';
+          const check = d.status === 'CONFIRMED' ? ' ✅' : '';
+          lines.push(`${i + 1}. ${d.name}${nominal}${check}`);
+        });
+
+        lines.push(``);
+        const totalRp = totals.total != null ? `Rp ${Number(totals.total).toLocaleString('id-ID')}` : '—';
+        lines.push(`Total terkonfirmasi: *${totalRp}* (${confirmed.length} penyumbang)`);
+        lines.push(`✅ = transfer sudah diverifikasi`);
+
+        document.getElementById('rekap-text').value = lines.join('\n');
+        document.getElementById('rekap-modal').classList.add('active');
+      } catch (err) { showToast('Gagal memuat data', 'error'); }
+    }
+
+    function closeRekapModal() { document.getElementById('rekap-modal').classList.remove('active'); }
+
+    function salinRekap(btn) {
+      const text = document.getElementById('rekap-text').value;
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Tersalin!';
+        setTimeout(() => btn.textContent = orig, 2000);
+      });
     }
 
     async function exportCsv() {
