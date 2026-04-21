@@ -45,8 +45,10 @@ async function api(endpoint, options = {}) {
     const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
     if (res.status === 401) {
       clearAuth();
-      window.location.href = '/login.html';
-      return null;
+      if (!window.location.pathname.includes('login.html')) {
+        window.location.href = '/login.html';
+      }
+      throw new Error('Username atau password salah');
     }
     const contentType = res.headers.get('content-type');
     if (contentType && contentType.includes('application/pdf')) {
@@ -59,7 +61,7 @@ async function api(endpoint, options = {}) {
       try {
         const errData = JSON.parse(text);
         errorMsg = errData.message || errorMsg;
-      } catch (e) {}
+      } catch (e) { }
       throw new Error(errorMsg);
     }
     if (!text) return null;
@@ -205,7 +207,7 @@ function showLightbox(src) {
       <button class="lightbox-close" onclick="closeLightbox()">✕</button>
       <img id="lightbox-img" src="" alt="Bukti pembayaran">
     `;
-    overlay.addEventListener('click', function(e) {
+    overlay.addEventListener('click', function (e) {
       if (e.target === overlay) closeLightbox();
     });
     document.body.appendChild(overlay);
