@@ -41,7 +41,7 @@
     </div>
 
     <!-- Stats grid -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="stats-grid">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4" id="stats-grid">
       <div class="stat-card">
         <div class="stat-number" id="stat-total">-</div>
         <div class="stat-label">Total Voucher</div>
@@ -57,6 +57,26 @@
       <div class="stat-card">
         <div class="stat-number" id="stat-pengkurban" style="background: linear-gradient(135deg, #c4b5fd, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
         <div class="stat-label">Pengkurban</div>
+      </div>
+    </div>
+
+    <!-- Qurban & donation stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="stat-card" style="cursor:pointer" onclick="location.href='/pengkurban.html?status=PENDING_VERIFICATION'">
+        <div class="stat-number" id="stat-pk-pending" style="background: linear-gradient(135deg, #fde68a, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
+        <div class="stat-label">Qurban Perlu Verifikasi</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer" onclick="location.href='/donations.html?status=PENDING_VERIFICATION'">
+        <div class="stat-number" id="stat-don-pending" style="background: linear-gradient(135deg, #fde68a, #fbbf24); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
+        <div class="stat-label">Sumbangan Perlu Verifikasi</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-don-confirmed" style="background: linear-gradient(135deg, #6ee7b7, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
+        <div class="stat-label">Total Sumbangan Masuk</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-pk-confirmed" style="background: linear-gradient(135deg, #6ee7b7, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">-</div>
+        <div class="stat-label">Qurban Terkonfirmasi</div>
       </div>
     </div>
 
@@ -105,7 +125,14 @@
         const eventId = select.value;
         const isAll = eventId === '' && select.options.length > 0;
         const params = isAll ? '?eventId=all' : (eventId ? `?eventId=${eventId}` : '');
-        const stats = await api(`/dashboard/stats${params}`);
+        const qParams = eventId ? `?eventId=${eventId}` : '';
+
+        const [stats, allPk, donations, donationTotal] = await Promise.all([
+          api(`/dashboard/stats${params}`),
+          api(`/pengkurban${qParams}`),
+          api(`/donations${qParams}`),
+          api(`/donations/total${qParams}`),
+        ]);
 
         document.getElementById('stat-total').textContent = stats.totalVouchers;
         document.getElementById('stat-claimed').textContent = stats.claimedVouchers;
@@ -113,6 +140,18 @@
         document.getElementById('stat-pengkurban').textContent = stats.totalPengkurban;
         document.getElementById('progress-text').textContent = stats.claimPercentage + '%';
         document.getElementById('progress-fill').style.width = stats.claimPercentage + '%';
+
+        // Pengkurban pending stats
+        const pkPending = allPk.filter(d => d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT').length;
+        const pkConfirmed = allPk.filter(d => d.status === 'CONFIRMED').length;
+        document.getElementById('stat-pk-pending').textContent = pkPending;
+        document.getElementById('stat-pk-confirmed').textContent = pkConfirmed;
+
+        // Donation stats
+        const donPending = donations.filter(d => d.status === 'PENDING_VERIFICATION').length;
+        document.getElementById('stat-don-pending').textContent = donPending;
+        document.getElementById('stat-don-confirmed').textContent =
+          donationTotal.total != null ? 'Rp ' + Number(donationTotal.total).toLocaleString('id-ID') : '0';
 
         const tbody = document.getElementById('recent-scans');
         if (stats.recentScans && stats.recentScans.length > 0) {

@@ -304,6 +304,14 @@ select.input-field option {
   background: rgba(167, 139, 250, 0.2);
   color: #c4b5fd;
 }
+.badge-pending {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fde68a;
+}
+.badge-rejected {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
 
 /* Toast notification */
 .toast-container {

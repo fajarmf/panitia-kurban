@@ -26,12 +26,21 @@
     </div>
 
     <div class="flex flex-col sm:flex-row justify-between gap-3 mb-4">
-      <select id="event-filter" class="input-field" style="max-width:280px" onchange="loadData()"></select>
+      <div class="flex gap-2 flex-wrap">
+        <select id="event-filter" class="input-field" style="max-width:280px" onchange="loadData()"></select>
+        <select id="status-filter" class="input-field" style="max-width:220px" onchange="loadData()">
+          <option value="">Semua Status</option>
+          <option value="PENDING_PAYMENT">Menunggu Pembayaran</option>
+          <option value="PENDING_VERIFICATION">Menunggu Verifikasi</option>
+          <option value="CONFIRMED">Terkonfirmasi</option>
+          <option value="REJECTED">Ditolak</option>
+        </select>
+      </div>
       <div class="flex gap-2">
         <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
         <button class="btn-primary" onclick="openModal()">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-          Tambah Pengkurban
+          Tambah
         </button>
       </div>
     </div>
@@ -39,28 +48,48 @@
     <div class="glass-card p-4">
       <div class="table-responsive">
         <table class="data-table">
-          <thead><tr><th>Nama</th><th>Jenis Hewan</th><th>Tipe Akad</th><th>Telepon</th><th>Catatan</th><th>Aksi</th></tr></thead>
-          <tbody id="data-table"><tr><td colspan="6" class="text-center py-8"><div class="spinner"></div></td></tr></tbody>
+          <thead>
+            <tr>
+              <th>No. Reg</th>
+              <th>Nama Pendaftar</th>
+              <th>Atas Nama Qurban</th>
+              <th>Jenis Hewan</th>
+              <th>Alamat</th>
+              <th>Bukti</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="data-table">
+            <tr><td colspan="8" class="text-center py-8"><div class="spinner"></div></td></tr>
+          </tbody>
         </table>
       </div>
     </div>
   </main>
 
+  <!-- Add/Edit modal -->
   <div class="modal-overlay" id="pk-modal">
     <div class="modal-content">
       <div class="modal-header"><h3 id="modal-title">Tambah Pengkurban</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
       <form onsubmit="saveData(event)">
         <input type="hidden" id="edit-id">
         <div class="form-group"><label>Event</label><select id="form-event" class="input-field" required></select></div>
-        <div class="form-group"><label>Nama Pengkurban</label><input type="text" id="form-name" class="input-field" required placeholder="Nama lengkap"></div>
+        <div class="form-group"><label>Nama Pendaftar</label><input type="text" id="form-name" class="input-field" required placeholder="Nama lengkap pendaftar"></div>
+        <div class="form-group"><label>Atas Nama Qurban (Shohibul)</label><textarea id="form-shohibul" class="input-field" rows="2" placeholder="Kosongkan jika sama dengan pendaftar. Sapi kolektif: satu nama per baris."></textarea></div>
+        <div class="form-group"><label>Alamat</label><input type="text" id="form-address" class="input-field" placeholder="contoh: Margata - M7/38"></div>
         <div class="form-group"><label>Jenis Hewan</label>
           <select id="form-animal" class="input-field" required>
-            <option value="SAPI">Sapi</option><option value="KAMBING">Kambing</option><option value="DOMBA">Domba</option>
+            <option value="DOMBA">Domba 🐑</option>
+            <option value="KAMBING">Kambing 🐐</option>
+            <option value="SAPI_KOLEKTIF">Sapi Kolektif (1/7) 🐄</option>
+            <option value="SAPI_PERORANGAN">Sapi Perorangan 🐄</option>
           </select>
         </div>
         <div class="form-group"><label>Tipe Akad</label>
           <select id="form-purchase" class="input-field" required>
-            <option value="BELI_MASJID">Beli via Masjid</option><option value="BAWA_SENDIRI">Bawa Sendiri</option>
+            <option value="BELI_MASJID">Beli via Masjid</option>
+            <option value="BAWA_SENDIRI">Bawa Sendiri</option>
           </select>
         </div>
         <div class="form-group"><label>No. Telepon</label><input type="tel" id="form-phone" class="input-field" placeholder="08xxxxxxxxxx"></div>
@@ -73,34 +102,105 @@
     </div>
   </div>
 
+  <!-- Verify modal -->
+  <div class="modal-overlay" id="verify-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="verify-modal-title">Verifikasi Pembayaran</h3>
+        <button class="modal-close" onclick="closeVerifyModal()">✕</button>
+      </div>
+      <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none">
+        <p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>
+        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain">
+      </div>
+      <p id="verify-no-proof" class="text-sm text-yellow-300/70 mb-3" style="display:none">⚠️ Belum ada bukti pembayaran yang diunggah.</p>
+      <div class="form-group">
+        <label>Catatan Verifikasi (opsional)</label>
+        <textarea id="verify-notes" class="input-field" rows="2" placeholder="Catatan"></textarea>
+      </div>
+      <input type="hidden" id="verify-id">
+      <div class="flex gap-3 mt-4">
+        <button type="button" class="btn-secondary flex-1" onclick="closeVerifyModal()">Batal</button>
+        <button type="button" class="btn-danger flex-1" onclick="submitVerify('REJECTED')">Tolak</button>
+        <button type="button" class="btn-primary flex-1" onclick="submitVerify('CONFIRMED')">✓ Konfirmasi</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/app.js"></script>
   <script>
     if (!requireAuth()) throw new Error('Not authenticated');
     initSidebar('pengkurban');
-    const animalLabels = { SAPI: 'Sapi 🐄', KAMBING: 'Kambing 🐐', DOMBA: 'Domba 🐑' };
+
+    const animalLabels = {
+      SAPI: 'Sapi 🐄', KAMBING: 'Kambing 🐐', DOMBA: 'Domba 🐑',
+      SAPI_KOLEKTIF: 'Sapi Kolektif', SAPI_PERORANGAN: 'Sapi Perorangan',
+    };
     const purchaseLabels = { BELI_MASJID: 'Beli via Masjid', BAWA_SENDIRI: 'Bawa Sendiri' };
+    const statusLabels = {
+      PENDING_PAYMENT: 'Menunggu Pembayaran',
+      PENDING_VERIFICATION: 'Menunggu Verifikasi',
+      CONFIRMED: 'Terkonfirmasi',
+      REJECTED: 'Ditolak',
+    };
+    const statusBadge = {
+      PENDING_PAYMENT: 'badge-claimed',
+      PENDING_VERIFICATION: 'badge-pending',
+      CONFIRMED: 'badge-active',
+      REJECTED: 'badge-rejected',
+    };
+
+    function escHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Pre-apply status filter from URL param (e.g. from dashboard quick-link)
+    const urlStatus = new URLSearchParams(location.search).get('status');
+    if (urlStatus) document.getElementById('status-filter').value = urlStatus;
 
     loadEventOptions('event-filter', true).then(() => loadData());
     loadEventOptions('form-event');
 
     async function loadData() {
       const eventId = document.getElementById('event-filter').value;
-      const params = eventId ? `?eventId=${eventId}` : '';
+      const status = document.getElementById('status-filter').value;
+      const params = new URLSearchParams();
+      if (eventId) params.set('eventId', eventId);
       try {
-        const data = await api(`/pengkurban${params}`);
+        let data = await api(`/pengkurban?${params}`);
+        if (status) data = data.filter(d => d.status === status);
+
         const tbody = document.getElementById('data-table');
-        if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>'; return; }
-        tbody.innerHTML = data.map(d => `<tr>
-          <td class="font-semibold">${d.name}</td>
-          <td>${animalLabels[d.animalType] || d.animalType}</td>
-          <td><span class="badge ${d.purchaseType === 'BELI_MASJID' ? 'badge-active' : 'badge-claimed'}">${purchaseLabels[d.purchaseType]}</span></td>
-          <td>${d.phone || '-'}</td>
-          <td class="text-xs text-emerald-300/50">${d.notes || '-'}</td>
-          <td><div class="flex gap-2">
-            <button class="btn-secondary btn-sm" onclick='editData(${JSON.stringify(d)})'>Edit</button>
-            <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
-          </div></td>
-        </tr>`).join('');
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.map(d => {
+          const proofHtml = d.paymentProofPath
+            ? `<a href="/${escHtml(d.paymentProofPath)}" target="_blank" class="btn-secondary btn-sm">Lihat</a>`
+            : '<span class="text-white/30 text-xs">—</span>';
+
+          const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
+          const verifyBtn = canVerify
+            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${JSON.stringify(d)})'>Verifikasi</button>`
+            : '';
+
+          return `<tr>
+            <td class="text-xs font-mono text-emerald-300/70">${escHtml(d.registrationNumber || '—')}</td>
+            <td class="font-semibold">${escHtml(d.name)}</td>
+            <td class="text-xs text-white/70">${escHtml(d.shohibulName || '—')}</td>
+            <td>${escHtml(animalLabels[d.animalType] || d.animalType)}</td>
+            <td class="text-xs text-white/60">${escHtml(d.address || '—')}</td>
+            <td>${proofHtml}</td>
+            <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
+            <td><div class="flex gap-2 flex-wrap">
+              ${verifyBtn}
+              <button class="btn-secondary btn-sm" onclick='editData(${JSON.stringify(d)})'>Edit</button>
+              <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
+            </div></td>
+          </tr>`;
+        }).join('');
       } catch (err) { showToast('Gagal memuat data', 'error'); }
     }
 
@@ -109,13 +209,11 @@
       const params = eventId ? `?eventId=${eventId}` : '';
       try {
         const token = getToken();
-        const res = await fetch(`/api/pengkurban/export${params}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await fetch(`/api/pengkurban/export${params}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!res.ok) throw new Error('Gagal export CSV');
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = `pengkurban-export.csv`; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = 'pengkurban-export.csv'; a.click();
         URL.revokeObjectURL(url);
         showToast('Berhasil export CSV');
       } catch (err) { showToast(err.message, 'error'); }
@@ -125,39 +223,88 @@
       document.getElementById('modal-title').textContent = 'Tambah Pengkurban';
       document.getElementById('edit-id').value = '';
       document.getElementById('form-name').value = '';
-      document.getElementById('form-animal').value = 'SAPI';
+      document.getElementById('form-shohibul').value = '';
+      document.getElementById('form-address').value = '';
+      document.getElementById('form-animal').value = 'DOMBA';
       document.getElementById('form-purchase').value = 'BELI_MASJID';
       document.getElementById('form-phone').value = '';
       document.getElementById('form-notes').value = '';
       document.getElementById('pk-modal').classList.add('active');
     }
+
     function editData(d) {
       document.getElementById('modal-title').textContent = 'Edit Pengkurban';
       document.getElementById('edit-id').value = d.id;
       document.getElementById('form-event').value = d.eventId;
       document.getElementById('form-name').value = d.name;
+      document.getElementById('form-shohibul').value = d.shohibulName || '';
+      document.getElementById('form-address').value = d.address || '';
       document.getElementById('form-animal').value = d.animalType;
       document.getElementById('form-purchase').value = d.purchaseType;
       document.getElementById('form-phone').value = d.phone || '';
       document.getElementById('form-notes').value = d.notes || '';
       document.getElementById('pk-modal').classList.add('active');
     }
+
     function closeModal() { document.getElementById('pk-modal').classList.remove('active'); }
 
     async function saveData(ev) {
       ev.preventDefault();
       const id = document.getElementById('edit-id').value;
-      const data = { eventId: document.getElementById('form-event').value, name: document.getElementById('form-name').value, animalType: document.getElementById('form-animal').value, purchaseType: document.getElementById('form-purchase').value, phone: document.getElementById('form-phone').value, notes: document.getElementById('form-notes').value };
+      const data = {
+        eventId: document.getElementById('form-event').value,
+        name: document.getElementById('form-name').value,
+        shohibulName: document.getElementById('form-shohibul').value || null,
+        address: document.getElementById('form-address').value,
+        animalType: document.getElementById('form-animal').value,
+        purchaseType: document.getElementById('form-purchase').value,
+        phone: document.getElementById('form-phone').value,
+        notes: document.getElementById('form-notes').value,
+      };
       try {
         if (id) { await api(`/pengkurban/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); showToast('Data diupdate'); }
         else { await api('/pengkurban', { method: 'POST', body: JSON.stringify(data) }); showToast('Data ditambahkan'); }
         closeModal(); loadData();
       } catch (err) { showToast(err.message, 'error'); }
     }
+
     async function deleteData(id) {
       if (!confirmAction('Yakin ingin menghapus data ini?')) return;
       try { await api(`/pengkurban/${id}`, { method: 'DELETE' }); showToast('Data dihapus'); loadData(); }
       catch (err) { showToast(err.message, 'error'); }
+    }
+
+    function openVerifyModal(d) {
+      document.getElementById('verify-id').value = d.id;
+      document.getElementById('verify-modal-title').textContent = `Verifikasi — ${d.name}`;
+      document.getElementById('verify-notes').value = '';
+      const proofWrap = document.getElementById('verify-proof-wrap');
+      const noProof = document.getElementById('verify-no-proof');
+      if (d.paymentProofPath) {
+        document.getElementById('verify-proof-img').src = '/' + d.paymentProofPath;
+        proofWrap.style.display = 'block';
+        noProof.style.display = 'none';
+      } else {
+        proofWrap.style.display = 'none';
+        noProof.style.display = 'block';
+      }
+      document.getElementById('verify-modal').classList.add('active');
+    }
+
+    function closeVerifyModal() { document.getElementById('verify-modal').classList.remove('active'); }
+
+    async function submitVerify(status) {
+      const id = document.getElementById('verify-id').value;
+      const notes = document.getElementById('verify-notes').value.trim();
+      try {
+        await api(`/pengkurban/${id}/verify`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, notes: notes || undefined }),
+        });
+        showToast(status === 'CONFIRMED' ? 'Pendaftaran dikonfirmasi' : 'Pendaftaran ditolak');
+        closeVerifyModal();
+        loadData();
+      } catch (err) { showToast(err.message, 'error'); }
     }
   </script>
 </body>
