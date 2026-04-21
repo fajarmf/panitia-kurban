@@ -92,9 +92,8 @@
 
         <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:12px;padding:1rem;margin-top:1.25rem;font-size:0.85rem;text-align:left">
           <div style="font-weight:600;color:#fbbf24;margin-bottom:0.35rem">ℹ️ Informasi Verifikasi</div>
-          <div style="color:rgba(255,255,255,0.75)">
+          <div style="color:rgba(255,255,255,0.75)" id="info-text">
             Panitia akan memverifikasi pembayaran Anda dalam 1x24 jam.
-            Status pendaftaran dapat dicek dengan mengunjungi kembali link pendaftaran menggunakan nomor registrasi di atas.
           </div>
         </div>
 
@@ -134,6 +133,11 @@
     if (mode === 'sumbangan') {
       document.getElementById('success-title').textContent = 'Sumbangan Terkirim!';
       document.getElementById('success-subtitle').textContent = 'Terima kasih atas sumbangan Anda';
+      document.getElementById('info-text').textContent =
+        'Panitia akan memverifikasi pembayaran Anda dalam 1x24 jam. Jazakumullahu Khairan atas keberkahan Bapak/Ibu.';
+    } else {
+      document.getElementById('info-text').textContent =
+        'Panitia akan memverifikasi pembayaran Anda dalam 1x24 jam. Simpan nomor registrasi di atas sebagai bukti pendaftaran.';
     }
 
     if (regNum) {
