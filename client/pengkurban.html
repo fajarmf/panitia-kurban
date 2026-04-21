@@ -37,6 +37,7 @@
         </select>
       </div>
       <div class="flex gap-2">
+        <button class="btn-secondary" onclick="openRekapModal()">📋 Rekap WA</button>
         <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
         <button class="btn-primary" onclick="openModal()">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
@@ -99,6 +100,21 @@
           <button type="submit" class="btn-primary flex-1">Simpan</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Rekap WA modal -->
+  <div class="modal-overlay" id="rekap-modal">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3>Rekap WA</h3>
+        <button class="modal-close" onclick="closeRekapModal()">✕</button>
+      </div>
+      <textarea id="rekap-text" class="input-field" rows="16" readonly style="font-size:13px;line-height:1.6;font-family:monospace;resize:vertical"></textarea>
+      <div class="flex gap-3 mt-4">
+        <button type="button" class="btn-secondary flex-1" onclick="closeRekapModal()">Tutup</button>
+        <button type="button" class="btn-primary flex-1" onclick="salinRekap(this)">📋 Salin</button>
+      </div>
     </div>
   </div>
 
@@ -292,6 +308,61 @@
     }
 
     function closeVerifyModal() { document.getElementById('verify-modal').classList.remove('active'); }
+
+    async function openRekapModal() {
+      const eventId = document.getElementById('event-filter').value;
+      const params = new URLSearchParams();
+      if (eventId) params.set('eventId', eventId);
+      try {
+        const data = await api(`/pengkurban?${params}`);
+        const active = data.filter(d => d.status !== 'REJECTED');
+
+        const groups = [
+          { key: 'DOMBA', icon: '🐑', label: 'Domba' },
+          { key: 'KAMBING', icon: '🐐', label: 'Kambing' },
+          { key: 'SAPI_KOLEKTIF', icon: '🐄', label: 'Sapi Kolektif' },
+          { key: 'SAPI_PERORANGAN', icon: '🐄', label: 'Sapi Perorangan' },
+        ];
+
+        const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        let lines = [`*Rekap Qurban Idul Adha 1447H*`, `_per ${now}_`, ``];
+
+        let totalConfirmed = 0;
+        groups.forEach(g => {
+          const rows = active.filter(d => d.animalType === g.key);
+          if (!rows.length) return;
+          const confirmed = rows.filter(d => d.status === 'CONFIRMED').length;
+          totalConfirmed += confirmed;
+          const extra = g.key === 'SAPI_KOLEKTIF' ? ` — ${rows.length}/7 slot` : ` — ${rows.length} orang`;
+          lines.push(`${g.icon} *${g.label}*${extra}`);
+          rows.forEach((d, i) => {
+            const displayName = (d.shohibulName || d.name).split('\n')[0].trim();
+            const addr = d.address ? ` — ${d.address}` : '';
+            const check = d.status === 'CONFIRMED' ? ' ✅' : '';
+            lines.push(`${i + 1}. ${displayName}${addr}${check}`);
+          });
+          lines.push(``);
+        });
+
+        const totalAll = active.length;
+        lines.push(`Total: ${totalAll} pengkurban (${totalConfirmed} terkonfirmasi)`);
+        lines.push(`✅ = infaq sudah diverifikasi`);
+
+        document.getElementById('rekap-text').value = lines.join('\n');
+        document.getElementById('rekap-modal').classList.add('active');
+      } catch (err) { showToast('Gagal memuat data', 'error'); }
+    }
+
+    function closeRekapModal() { document.getElementById('rekap-modal').classList.remove('active'); }
+
+    function salinRekap(btn) {
+      const text = document.getElementById('rekap-text').value;
+      navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Tersalin!';
+        setTimeout(() => btn.textContent = orig, 2000);
+      });
+    }
 
     async function submitVerify(status) {
       const id = document.getElementById('verify-id').value;
