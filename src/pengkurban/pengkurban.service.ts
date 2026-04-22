@@ -13,12 +13,14 @@ import { CreatePengkurbanDto, UpdatePengkurbanDto } from './dto/pengkurban.dto';
 import { PublicRegisterDto } from './dto/public-register.dto';
 import { VerifyRegistrationDto } from './dto/verify-registration.dto';
 import { RegistrationStatus } from '../common/enums/registration-status.enum';
+import { WaNotifierService } from '../common/notifications/wa-notifier.service';
 
 @Injectable()
 export class PengkurbanService {
   constructor(
     @InjectRepository(Pengkurban)
     private pengkurbanRepository: Repository<Pengkurban>,
+    private waNotifier: WaNotifierService,
   ) {}
 
   async findAll(eventId?: string): Promise<Pengkurban[]> {
@@ -99,7 +101,7 @@ export class PengkurbanService {
 
   async remove(id: string): Promise<void> {
     const pk = await this.findById(id);
-    await this.pengkurbanRepository.remove(pk);
+    await this.pengkurbanRepository.softRemove(pk);
   }
 
   async countByEvent(eventId: string): Promise<number> {
@@ -144,6 +146,16 @@ export class PengkurbanService {
       status: RegistrationStatus.PENDING_PAYMENT,
     });
     const saved = await this.pengkurbanRepository.save(pk);
+
+    this.waNotifier.send(
+      `🐄 *Pengkurban baru*\n` +
+        `${saved.registrationNumber} — ${saved.name}\n` +
+        `Hewan: ${saved.animalType}${saved.animalSize ? ' ' + saved.animalSize : ''}\n` +
+        `Akad: ${saved.purchaseType}\n` +
+        (saved.phone ? `HP: ${saved.phone}\n` : '') +
+        `Status: ${saved.status}`,
+    );
+
     return {
       id: saved.id,
       registrationNumber: saved.registrationNumber,
@@ -251,17 +263,24 @@ export class PengkurbanService {
     }));
   }
 
-  async generateRegistrationNumber(
-    eventId: string,
-    attempt = 0,
-  ): Promise<string> {
+  async generateRegistrationNumber(eventId: string): Promise<string> {
     const event = await this.pengkurbanRepository.manager
       .getRepository(Event)
       .findOne({ where: { id: eventId } });
     if (!event) throw new NotFoundException('Event tidak ditemukan');
 
-    const count = await this.pengkurbanRepository.count({ where: { eventId } });
-    const seq = String(count + 1 + attempt).padStart(4, '0');
+    const row = await this.pengkurbanRepository
+      .createQueryBuilder('pk')
+      .withDeleted()
+      .select(
+        "MAX(CAST(SUBSTRING(pk.registration_number FROM '(\\d+)$') AS INTEGER))",
+        'max',
+      )
+      .where('pk.event_id = :eventId', { eventId })
+      .getRawOne<{ max: number | null }>();
+
+    const next = (row?.max ?? 0) + 1;
+    const seq = String(next).padStart(4, '0');
     return `REG-${event.year}-${seq}`;
   }
 }

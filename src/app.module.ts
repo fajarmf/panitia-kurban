@@ -14,6 +14,7 @@ import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
 import { DonationsModule } from './donations/donations.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationsModule } from './common/notifications/notifications.module';
 
 import { AppController } from './app.controller';
 
@@ -64,6 +65,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     ActivityLogsModule,
     DonationsModule,
     AnalyticsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
