@@ -26,7 +26,7 @@ export class Pengkurban {
   @Column()
   name: string;
 
-  @Column({ name: 'address' })
+  @Column({ name: 'address', type: 'varchar', nullable: true })
   address: string;
 
   @Column({ type: 'enum', enum: AnimalType, name: 'animal_type' })

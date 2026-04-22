@@ -321,10 +321,9 @@
             <div class="form-group">
               <label for="field-shohibul">Atas nama qurban (shohibul qurban)</label>
               <textarea id="field-shohibul" class="input-field" rows="3"
-                placeholder="Contoh: Fajar bin Abdullah, Fatimah binti Fulan. Kosongkan jika sama dengan nama pendaftar. Untuk sapi kolektif (1/7), tulis 7 nama — satu nama per baris."
+                placeholder="Kosongkan jika sama dengan nama pendaftar."
                 style="resize:vertical"></textarea>
-              <div style="font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.4rem">Boleh diisi nama berbeda dari
-                pendaftar (mis. Fajar bin Abdullah, Fatimah binti Fulan). Sapi kolektif bisa diisi sampai 7 nama.</div>
+              <div id="shohibul-hint" style="font-size:0.8rem;color:rgba(255,255,255,0.55);margin-top:0.4rem">Kosongkan jika sama dengan nama pendaftar.</div>
             </div>
 
             <div class="form-group">
@@ -503,7 +502,20 @@
         }
         document.getElementById('section-sapi-perorangan').classList.remove('section-hidden');
       }
+      updateShohibulHint(animal);
       updatePriceBreakdown();
+    }
+
+    function updateShohibulHint(animal) {
+      const el = document.getElementById('field-shohibul');
+      const hint = document.getElementById('shohibul-hint');
+      if (animal === 'SAPI_PERORANGAN') {
+        el.placeholder = 'Boleh diisi sampai 7 nama shohibul qurban — satu nama per baris.\nKosongkan jika sama dengan nama pendaftar.';
+        hint.textContent = 'Sapi perorangan: boleh didedikasikan untuk beberapa orang (maks. 7 nama, satu per baris).';
+      } else {
+        el.placeholder = 'Kosongkan jika sama dengan nama pendaftar.';
+        hint.textContent = 'Kosongkan jika sama dengan nama pendaftar.';
+      }
     }
 
     function buildTipeOptions(animal) {
