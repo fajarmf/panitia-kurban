@@ -114,6 +114,12 @@
   </div>
 
   <script>
+    (function() {
+      let sid = localStorage.getItem('_sid');
+      if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('_sid', sid); }
+      fetch('/api/public/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: 'success', sessionId: sid }) }).catch(() => {});
+    })();
+
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
     const name = params.get('name');

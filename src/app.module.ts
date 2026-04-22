@@ -13,6 +13,7 @@ import { SeedModule } from './seed/seed.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor';
 import { DonationsModule } from './donations/donations.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 import { AppController } from './app.controller';
 
@@ -62,6 +63,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     SeedModule,
     ActivityLogsModule,
     DonationsModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

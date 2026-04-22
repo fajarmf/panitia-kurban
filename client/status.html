@@ -162,6 +162,12 @@
   </div>
 
   <script>
+    (function() {
+      let sid = localStorage.getItem('_sid');
+      if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('_sid', sid); }
+      fetch('/api/public/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: 'status', sessionId: sid, referrer: document.referrer || undefined }) }).catch(() => {});
+    })();
+
     const animalLabels = {
       DOMBA: 'Domba', KAMBING: 'Kambing',
       SAPI_KOLEKTIF: 'Sapi Kolektif (1/7)', SAPI_PERORANGAN: 'Sapi Perorangan',
