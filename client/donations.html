@@ -247,61 +247,15 @@
       }
     }
 
-    const INFAQ = { DOMBA: 300000, KAMBING: 300000, SAPI_KOLEKTIF: 300000, SAPI_KOLEKTIF_A: 300000, SAPI_KOLEKTIF_B: 300000, SAPI_PERORANGAN: 1750000 };
-
     async function openRekapModal() {
       const eventId = document.getElementById('event-filter').value;
       const params = new URLSearchParams();
       if (eventId) params.set('eventId', eventId);
       try {
-        const [data, totals, pengkurban] = await Promise.all([
-          api(`/donations?${params}`),
-          api(`/donations/total${eventId ? '?eventId=' + eventId : ''}`),
-          api(`/pengkurban?${params}`),
-        ]);
-        const active = data.filter(d => d.status !== 'REJECTED');
-        const confirmed = active.filter(d => d.status === 'CONFIRMED');
-
-        const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        let lines = [`*Rekap Dana Idul Adha 1447H*`, `_per ${now}_`, ``];
-
-        // Sumbangan
-        lines.push(`💰 *Sumbangan Seikhlasnya* (${active.length} orang)`);
-        if (active.length) {
-          active.forEach((d, i) => {
-            const nominal = d.amount != null ? ` — Rp ${Number(d.amount).toLocaleString('id-ID')}` : '';
-            const check = d.status === 'CONFIRMED' ? ' ✅' : '';
-            lines.push(`${i + 1}. ${d.name}${nominal}${check}`);
-          });
-        } else {
-          lines.push(`_(belum ada)_`);
-        }
-        const totalSumbangan = totals.total != null ? Number(totals.total) : 0;
-        lines.push(`_Total terkonfirmasi: Rp ${totalSumbangan.toLocaleString('id-ID')}_`);
-        lines.push(``);
-
-        // Infaq qurban
-        const pkActive = pengkurban.filter(d => d.status === 'CONFIRMED');
-        const totalInfaq = pkActive.reduce((sum, d) => sum + (INFAQ[d.animalType] || 0), 0);
-        lines.push(`🕌 *Infaq Operasional Qurban* (${pkActive.length} pengkurban terkonfirmasi)`);
-        if (pkActive.length) {
-          pkActive.forEach((d, i) => {
-            const infaqAmt = INFAQ[d.animalType] || 0;
-            lines.push(`${i + 1}. ${d.name} — Rp ${infaqAmt.toLocaleString('id-ID')} ✅`);
-          });
-        } else {
-          lines.push(`_(belum ada)_`);
-        }
-        lines.push(`_Total infaq: Rp ${totalInfaq.toLocaleString('id-ID')}_`);
-        lines.push(``);
-
-        const grandTotal = totalSumbangan + totalInfaq;
-        lines.push(`*Total Dana Masuk: Rp ${grandTotal.toLocaleString('id-ID')}*`);
-        lines.push(`✅ = sudah diverifikasi`);
-
-        document.getElementById('rekap-text').value = lines.join('\n');
+        const res = await api(`/rekap/donasi?${params}`);
+        document.getElementById('rekap-text').value = res.text;
         document.getElementById('rekap-modal').classList.add('active');
-      } catch (err) { showToast('Gagal memuat data', 'error'); }
+      } catch (err) { showToast('Gagal memuat rekap', 'error'); }
     }
 
     function closeRekapModal() { document.getElementById('rekap-modal').classList.remove('active'); }

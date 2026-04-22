@@ -8,12 +8,14 @@ import { Event } from '../events/event.entity';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { VerifyDonationDto } from './dto/verify-donation.dto';
 import { DonationStatus } from '../common/enums/donation-status.enum';
+import { WaNotifierService } from '../common/notifications/wa-notifier.service';
 
 @Injectable()
 export class DonationsService {
   constructor(
     @InjectRepository(Donation)
     private donationRepository: Repository<Donation>,
+    private waNotifier: WaNotifierService,
   ) {}
 
   async submitPublic(
@@ -50,6 +52,19 @@ export class DonationsService {
       saved.paymentProofPaths = [`uploads/donation-proofs/${filename}`];
       saved = await this.donationRepository.save(saved);
     }
+
+    const amountStr =
+      saved.amount != null
+        ? `Rp ${Number(saved.amount).toLocaleString('id-ID')}`
+        : '(tidak disebutkan)';
+    this.waNotifier.send(
+      `💰 *Donasi baru*\n` +
+        `${saved.name}\n` +
+        `Jumlah: ${amountStr}\n` +
+        (saved.phone ? `HP: ${saved.phone}\n` : '') +
+        `Status: ${saved.status}` +
+        (file ? '\n(+ bukti transfer terlampir)' : ''),
+    );
 
     return {
       id: saved.id,
@@ -104,7 +119,7 @@ export class DonationsService {
   async remove(id: string): Promise<void> {
     const donation = await this.donationRepository.findOne({ where: { id } });
     if (!donation) throw new NotFoundException('Donasi tidak ditemukan');
-    await this.donationRepository.remove(donation);
+    await this.donationRepository.softRemove(donation);
   }
 
   async exportCsv(eventId?: string): Promise<string> {
