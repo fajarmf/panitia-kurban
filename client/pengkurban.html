@@ -318,49 +318,10 @@
       const params = new URLSearchParams();
       if (eventId) params.set('eventId', eventId);
       try {
-        const data = await api(`/pengkurban?${params}`);
-        const active = data.filter(d => d.status !== 'REJECTED');
-
-        const groups = [
-          { key: 'DOMBA', icon: '🐑', label: 'Domba' },
-          { key: 'KAMBING', icon: '🐐', label: 'Kambing' },
-          { key: 'SAPI_KOLEKTIF_A', icon: '🐄', label: 'Sapi Kolektif A (350-400 kg)' },
-          { key: 'SAPI_KOLEKTIF_B', icon: '🐄', label: 'Sapi Kolektif B (320-350 kg)' },
-          { key: 'SAPI_KOLEKTIF', icon: '🐄', label: 'Sapi Kolektif' },
-          { key: 'SAPI_PERORANGAN', icon: '🐄', label: 'Sapi Perorangan' },
-        ];
-
-        const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        let lines = [`*Rekap Qurban Idul Adha 1447H*`, `_per ${now}_`, ``];
-
-        let totalConfirmed = 0;
-        groups.forEach(g => {
-          const rows = active.filter(d => d.animalType === g.key);
-          const confirmed = rows.filter(d => d.status === 'CONFIRMED').length;
-          totalConfirmed += confirmed;
-          const isKolektif = g.key === 'SAPI_KOLEKTIF' || g.key === 'SAPI_KOLEKTIF_A' || g.key === 'SAPI_KOLEKTIF_B';
-          const extra = isKolektif ? ` — ${rows.length}/7 slot` : ` — ${rows.length} orang`;
-          lines.push(`${g.icon} *${g.label}*${extra}`);
-          if (rows.length) {
-            rows.forEach((d, i) => {
-              const displayName = (d.shohibulName || d.name).split('\n')[0].trim();
-              const addr = d.address ? ` — ${d.address}` : '';
-              const check = d.status === 'CONFIRMED' ? ' ✅' : '';
-              lines.push(`${i + 1}. ${displayName}${addr}${check}`);
-            });
-          } else {
-            lines.push(`_(belum ada)_`);
-          }
-          lines.push(``);
-        });
-
-        const totalAll = active.length;
-        lines.push(`Total: ${totalAll} pengkurban (${totalConfirmed} terkonfirmasi)`);
-        lines.push(`✅ = infaq sudah diverifikasi`);
-
-        document.getElementById('rekap-text').value = lines.join('\n');
+        const res = await api(`/rekap/pengkurban?${params}`);
+        document.getElementById('rekap-text').value = res.text;
         document.getElementById('rekap-modal').classList.add('active');
-      } catch (err) { showToast('Gagal memuat data', 'error'); }
+      } catch (err) { showToast('Gagal memuat rekap', 'error'); }
     }
 
     function closeRekapModal() { document.getElementById('rekap-modal').classList.remove('active'); }

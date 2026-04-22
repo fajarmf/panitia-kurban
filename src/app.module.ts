@@ -15,6 +15,7 @@ import { ActivityLogInterceptor } from './activity-logs/activity-log.interceptor
 import { DonationsModule } from './donations/donations.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './common/notifications/notifications.module';
+import { RekapModule } from './rekap/rekap.module';
 
 import { AppController } from './app.controller';
 
@@ -66,6 +67,7 @@ const isProduction = process.env.NODE_ENV === 'production';
     DonationsModule,
     AnalyticsModule,
     NotificationsModule,
+    RekapModule,
   ],
   controllers: [AppController],
   providers: [
