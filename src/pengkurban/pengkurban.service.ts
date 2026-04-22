@@ -157,32 +157,30 @@ export class PengkurbanService {
   ): Promise<{
     id: string;
     status: RegistrationStatus;
-    paymentProofPath: string;
+    paymentProofPaths: string[];
   }> {
     const pk = await this.findById(id);
-
-    if (pk.status !== RegistrationStatus.PENDING_PAYMENT) {
-      throw new BadRequestException(
-        'Bukti pembayaran hanya bisa diunggah saat status PENDING_PAYMENT',
-      );
-    }
 
     const uploadDir = path.join(process.cwd(), 'uploads', 'payment-proofs');
     fs.mkdirSync(uploadDir, { recursive: true });
 
     const ext = path.extname(file.originalname);
-    const filename = `${pk.registrationNumber}${ext}`;
+    const timestamp = Date.now();
+    const filename = `${pk.registrationNumber}-${timestamp}${ext}`;
     const filepath = path.join(uploadDir, filename);
     fs.writeFileSync(filepath, file.buffer);
 
-    pk.paymentProofPath = `uploads/payment-proofs/${filename}`;
-    pk.status = RegistrationStatus.PENDING_VERIFICATION;
+    const existing = pk.paymentProofPaths || [];
+    pk.paymentProofPaths = [...existing, `uploads/payment-proofs/${filename}`];
+    if (pk.status === RegistrationStatus.PENDING_PAYMENT) {
+      pk.status = RegistrationStatus.PENDING_VERIFICATION;
+    }
     await this.pengkurbanRepository.save(pk);
 
     return {
       id: pk.id,
       status: pk.status,
-      paymentProofPath: pk.paymentProofPath,
+      paymentProofPaths: pk.paymentProofPaths,
     };
   }
 

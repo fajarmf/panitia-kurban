@@ -100,10 +100,7 @@
         <h3 id="verify-modal-title">Verifikasi Sumbangan</h3>
         <button class="modal-close" onclick="closeVerifyModal()">✕</button>
       </div>
-      <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none">
-        <p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>
-        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain;cursor:zoom-in" onclick="showLightbox(this.src)">
-      </div>
+      <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none"></div>
       <div class="form-group">
         <label>Catatan (opsional)</label>
         <textarea id="verify-notes" class="input-field" rows="2" placeholder="Catatan verifikasi"></textarea>
@@ -165,8 +162,9 @@
         }
 
         tbody.innerHTML = data.map(d => {
-          const proofHtml = d.paymentProofPath
-            ? `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(d.paymentProofPath)}')">Lihat</button>`
+          const proofs = d.paymentProofPaths || [];
+          const proofHtml = proofs.length
+            ? proofs.map((p, i) => `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(p)}')">${proofs.length > 1 ? `Bukti ${i+1}` : 'Lihat'}</button>`).join(' ')
             : '<span class="text-white/30 text-xs">—</span>';
 
           const canVerify = d.status === 'PENDING_VERIFICATION';
@@ -206,11 +204,13 @@
       document.getElementById('verify-modal-title').textContent = `Verifikasi — ${d.name}`;
       document.getElementById('verify-notes').value = '';
       const proofWrap = document.getElementById('verify-proof-wrap');
-      const proofImg = document.getElementById('verify-proof-img');
-      if (d.paymentProofPath) {
-        proofImg.src = '/api/' + d.paymentProofPath;
+      const proofs = d.paymentProofPaths || [];
+      if (proofs.length) {
+        proofWrap.innerHTML = '<p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>' +
+          proofs.map(p => `<img src="/api/${escHtml(p)}" alt="Bukti" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain;cursor:zoom-in;margin-bottom:8px;display:block" onclick="showLightbox(this.src)">`).join('');
         proofWrap.style.display = 'block';
       } else {
+        proofWrap.innerHTML = '';
         proofWrap.style.display = 'none';
       }
       document.getElementById('verify-modal').classList.add('active');
@@ -247,32 +247,57 @@
       }
     }
 
+    const INFAQ = { DOMBA: 300000, KAMBING: 300000, SAPI_KOLEKTIF: 300000, SAPI_KOLEKTIF_A: 300000, SAPI_KOLEKTIF_B: 300000, SAPI_PERORANGAN: 1750000 };
+
     async function openRekapModal() {
       const eventId = document.getElementById('event-filter').value;
       const params = new URLSearchParams();
       if (eventId) params.set('eventId', eventId);
       try {
-        const [data, totals] = await Promise.all([
+        const [data, totals, pengkurban] = await Promise.all([
           api(`/donations?${params}`),
           api(`/donations/total${eventId ? '?eventId=' + eventId : ''}`),
+          api(`/pengkurban?${params}`),
         ]);
         const active = data.filter(d => d.status !== 'REJECTED');
         const confirmed = active.filter(d => d.status === 'CONFIRMED');
 
         const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        let lines = [`*Rekap Sumbangan Idul Adha 1447H*`, `_per ${now}_`, ``];
+        let lines = [`*Rekap Dana Idul Adha 1447H*`, `_per ${now}_`, ``];
 
-        lines.push(`*Daftar Penyumbang* (${active.length} orang)`);
-        active.forEach((d, i) => {
-          const nominal = d.amount != null ? ` — Rp ${Number(d.amount).toLocaleString('id-ID')}` : '';
-          const check = d.status === 'CONFIRMED' ? ' ✅' : '';
-          lines.push(`${i + 1}. ${d.name}${nominal}${check}`);
-        });
-
+        // Sumbangan
+        lines.push(`💰 *Sumbangan Seikhlasnya* (${active.length} orang)`);
+        if (active.length) {
+          active.forEach((d, i) => {
+            const nominal = d.amount != null ? ` — Rp ${Number(d.amount).toLocaleString('id-ID')}` : '';
+            const check = d.status === 'CONFIRMED' ? ' ✅' : '';
+            lines.push(`${i + 1}. ${d.name}${nominal}${check}`);
+          });
+        } else {
+          lines.push(`_(belum ada)_`);
+        }
+        const totalSumbangan = totals.total != null ? Number(totals.total) : 0;
+        lines.push(`_Total terkonfirmasi: Rp ${totalSumbangan.toLocaleString('id-ID')}_`);
         lines.push(``);
-        const totalRp = totals.total != null ? `Rp ${Number(totals.total).toLocaleString('id-ID')}` : '—';
-        lines.push(`Total terkonfirmasi: *${totalRp}* (${confirmed.length} penyumbang)`);
-        lines.push(`✅ = transfer sudah diverifikasi`);
+
+        // Infaq qurban
+        const pkActive = pengkurban.filter(d => d.status === 'CONFIRMED');
+        const totalInfaq = pkActive.reduce((sum, d) => sum + (INFAQ[d.animalType] || 0), 0);
+        lines.push(`🕌 *Infaq Operasional Qurban* (${pkActive.length} pengkurban terkonfirmasi)`);
+        if (pkActive.length) {
+          pkActive.forEach((d, i) => {
+            const infaqAmt = INFAQ[d.animalType] || 0;
+            lines.push(`${i + 1}. ${d.name} — Rp ${infaqAmt.toLocaleString('id-ID')} ✅`);
+          });
+        } else {
+          lines.push(`_(belum ada)_`);
+        }
+        lines.push(`_Total infaq: Rp ${totalInfaq.toLocaleString('id-ID')}_`);
+        lines.push(``);
+
+        const grandTotal = totalSumbangan + totalInfaq;
+        lines.push(`*Total Dana Masuk: Rp ${grandTotal.toLocaleString('id-ID')}*`);
+        lines.push(`✅ = sudah diverifikasi`);
 
         document.getElementById('rekap-text').value = lines.join('\n');
         document.getElementById('rekap-modal').classList.add('active');

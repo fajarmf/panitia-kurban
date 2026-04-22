@@ -43,10 +43,11 @@ export class DonationsService {
       const uploadDir = path.join(process.cwd(), 'uploads', 'donation-proofs');
       fs.mkdirSync(uploadDir, { recursive: true });
       const ext = path.extname(file.originalname);
-      const filename = `${saved.id}${ext}`;
+      const timestamp = Date.now();
+      const filename = `${saved.id}-${timestamp}${ext}`;
       const filepath = path.join(uploadDir, filename);
       fs.writeFileSync(filepath, file.buffer);
-      saved.paymentProofPath = `uploads/donation-proofs/${filename}`;
+      saved.paymentProofPaths = [`uploads/donation-proofs/${filename}`];
       saved = await this.donationRepository.save(saved);
     }
 

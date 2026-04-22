@@ -414,14 +414,13 @@
           </div>
 
           <div class="form-group">
-            <label>Upload bukti transfer</label>
+            <label>Upload bukti transfer <span style="font-weight:400;color:rgba(255,255,255,0.4);font-size:0.85em">(opsional — bisa diunggah nanti)</span></label>
             <div class="file-upload-area" id="upload-area" onclick="document.getElementById('field-proof').click()">
-              <div>📎 Klik untuk pilih gambar</div>
-              <div style="font-size:0.8rem;color:rgba(255,255,255,0.45);margin-top:0.25rem">JPEG, PNG, WebP — maks 5 MB
-              </div>
-              <img id="proof-preview" alt="Preview bukti transfer">
+              <div>📎 Klik untuk pilih gambar (opsional)</div>
+              <div style="font-size:0.8rem;color:rgba(255,255,255,0.45);margin-top:0.25rem">JPEG, PNG, WebP · bisa lebih dari 1 foto</div>
+              <div id="proof-previews" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px"></div>
             </div>
-            <input type="file" id="field-proof" accept="image/jpeg,image/png,image/webp" style="display:none">
+            <input type="file" id="field-proof" accept="image/jpeg,image/png,image/webp" multiple style="display:none">
           </div>
 
           <div class="error-box" id="error-box"></div>
@@ -680,7 +679,7 @@
       const street = document.getElementById('field-street').value.trim();
       const address = [cluster, street].filter(Boolean).join(' - ');
       const phone = document.getElementById('field-phone').value.trim();
-      const proofFile = document.getElementById('field-proof').files[0];
+      const proofFiles = Array.from(document.getElementById('field-proof').files);
 
       if (!selectedMode) return showError('Pilih jenis pendaftaran terlebih dahulu.');
       if (!name) return showError('Nama lengkap wajib diisi.');
@@ -703,11 +702,11 @@
             return showError('Masukkan estimasi berat sapi (minimal 100 kg).');
           }
         }
-        await submitQurban(name, address, phone, proofFile);
+        await submitQurban(name, address, phone, proofFiles);
       } else {
         const amount = parseFloat(document.getElementById('field-amount').value);
         if (!amount || amount < 0) return showError('Masukkan nominal sumbangan.');
-        await submitSumbangan(name, address, phone, amount, proofFile);
+        await submitSumbangan(name, address, phone, amount, proofFiles[0] || null);
       }
     }
 
@@ -741,7 +740,7 @@
       return getAnimalPrice();
     }
 
-    async function submitQurban(name, address, phone, proofFile) {
+    async function submitQurban(name, address, phone, proofFiles) {
       setSubmitting(true);
       try {
         const notes = document.getElementById('field-notes-qurban').value.trim();
@@ -772,9 +771,9 @@
         const regData = await reg.json();
         if (!reg.ok) throw new Error(regData.message || 'Gagal mendaftar');
 
-        if (proofFile) {
+        for (const file of proofFiles) {
           const fd = new FormData();
-          fd.append('paymentProof', proofFile);
+          fd.append('paymentProof', file);
           const upRes = await fetch(`/api/public/register/${regData.id}/payment-proof`, {
             method: 'POST',
             body: fd,
@@ -857,15 +856,12 @@
     });
 
     document.getElementById('field-proof').addEventListener('change', e => {
-      const file = e.target.files[0];
-      const preview = document.getElementById('proof-preview');
-      if (file) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = 'block';
-      } else {
-        preview.style.display = 'none';
-        preview.src = '';
-      }
+      const files = Array.from(e.target.files);
+      const container = document.getElementById('proof-previews');
+      container.innerHTML = files.map(f => {
+        const url = URL.createObjectURL(f);
+        return `<img src="${url}" alt="${f.name}" style="max-height:90px;max-width:90px;border-radius:6px;object-fit:cover">`;
+      }).join('');
     });
 
     document.getElementById('daftar-form').addEventListener('submit', handleSubmit);

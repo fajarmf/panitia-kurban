@@ -131,14 +131,11 @@
               <div id="upload-placeholder">
                 <div style="font-size:2rem;margin-bottom:0.5rem">📎</div>
                 <div style="font-weight:500;color:rgba(255,255,255,0.8)">Klik untuk pilih foto bukti transfer</div>
-                <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:0.25rem">JPG, PNG, WEBP · maks 5 MB</div>
+                <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:0.25rem">JPG, PNG, WEBP · bisa lebih dari 1 foto</div>
               </div>
-              <div id="upload-preview" style="display:none">
-                <img id="preview-img" src="" alt="Preview" style="max-height:180px;border-radius:8px;margin-bottom:0.5rem">
-                <div id="preview-name" style="font-size:0.85rem;color:rgba(255,255,255,0.6)"></div>
-              </div>
+              <div id="upload-preview" style="display:none;flex-wrap:wrap;gap:8px;justify-content:center"></div>
             </label>
-            <input type="file" id="proof-input" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleFileSelect(event)">
+            <input type="file" id="proof-input" accept="image/jpeg,image/png,image/webp" multiple style="display:none" onchange="handleFileSelect(event)">
             <button class="btn-primary" style="width:100%;margin-top:0.75rem" id="upload-btn" onclick="uploadProof()">
               Kirim Bukti Pembayaran
             </button>
@@ -263,44 +260,44 @@
     }
 
     function handleFileSelect(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
       document.getElementById('upload-placeholder').style.display = 'none';
       const preview = document.getElementById('upload-preview');
-      preview.style.display = '';
-      document.getElementById('preview-name').textContent = file.name;
-      const reader = new FileReader();
-      reader.onload = e => { document.getElementById('preview-img').src = e.target.result; };
-      reader.readAsDataURL(file);
+      preview.style.display = 'flex';
+      preview.innerHTML = files.map(f => {
+        const url = URL.createObjectURL(f);
+        return `<div style="text-align:center"><img src="${url}" alt="${f.name}" style="max-height:120px;max-width:120px;border-radius:8px;object-fit:cover"><div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:4px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</div></div>`;
+      }).join('');
       document.getElementById('upload-label').classList.add('has-file');
     }
 
     async function uploadProof() {
-      const file = document.getElementById('proof-input').files[0];
-      if (!file) {
+      const files = Array.from(document.getElementById('proof-input').files);
+      if (!files.length) {
         alert('Pilih foto bukti pembayaran terlebih dahulu.');
         return;
       }
       const btn = document.getElementById('upload-btn');
       btn.disabled = true;
-      btn.textContent = 'Mengunggah...';
-
-      const formData = new FormData();
-      formData.append('paymentProof', file);
 
       try {
-        const res = await fetch(`/api/public/register/${currentId}/payment-proof`, {
-          method: 'POST',
-          body: formData,
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          alert(body.message || 'Gagal mengunggah bukti. Coba lagi.');
-          btn.disabled = false;
-          btn.textContent = 'Kirim Bukti Pembayaran';
-          return;
+        for (let i = 0; i < files.length; i++) {
+          btn.textContent = files.length > 1 ? `Mengunggah ${i+1}/${files.length}...` : 'Mengunggah...';
+          const formData = new FormData();
+          formData.append('paymentProof', files[i]);
+          const res = await fetch(`/api/public/register/${currentId}/payment-proof`, {
+            method: 'POST',
+            body: formData,
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            alert(body.message || 'Gagal mengunggah bukti. Coba lagi.');
+            btn.disabled = false;
+            btn.textContent = 'Kirim Bukti Pembayaran';
+            return;
+          }
         }
-        // Reload status to show updated state
         await loadStatus(currentId);
       } catch (err) {
         alert('Gagal menghubungi server. Periksa koneksi internet.');

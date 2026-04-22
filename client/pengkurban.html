@@ -126,10 +126,7 @@
         <h3 id="verify-modal-title">Verifikasi Pembayaran</h3>
         <button class="modal-close" onclick="closeVerifyModal()">✕</button>
       </div>
-      <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none">
-        <p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>
-        <img id="verify-proof-img" src="" alt="Bukti pembayaran" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain;cursor:zoom-in" onclick="showLightbox(this.src)">
-      </div>
+      <div id="verify-proof-wrap" style="margin-bottom:1rem;display:none"></div>
       <p id="verify-no-proof" class="text-sm text-yellow-300/70 mb-3" style="display:none">⚠️ Belum ada bukti pembayaran yang diunggah.</p>
       <div class="form-group">
         <label>Catatan Verifikasi (opsional)</label>
@@ -196,8 +193,9 @@
         }
 
         tbody.innerHTML = data.map(d => {
-          const proofHtml = d.paymentProofPath
-            ? `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(d.paymentProofPath)}')">Lihat</button>`
+          const proofs = d.paymentProofPaths || [];
+          const proofHtml = proofs.length
+            ? proofs.map((p, i) => `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(p)}')">${proofs.length > 1 ? `Bukti ${i+1}` : 'Lihat'}</button>`).join(' ')
             : '<span class="text-white/30 text-xs">—</span>';
 
           const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
@@ -299,11 +297,14 @@
       document.getElementById('verify-notes').value = '';
       const proofWrap = document.getElementById('verify-proof-wrap');
       const noProof = document.getElementById('verify-no-proof');
-      if (d.paymentProofPath) {
-        document.getElementById('verify-proof-img').src = '/api/' + d.paymentProofPath;
+      const proofs = d.paymentProofPaths || [];
+      if (proofs.length) {
+        proofWrap.innerHTML = '<p class="text-sm text-white/60 mb-2">Bukti Pembayaran:</p>' +
+          proofs.map(p => `<img src="/api/${escHtml(p)}" alt="Bukti" style="max-width:100%;border-radius:8px;max-height:300px;object-fit:contain;cursor:zoom-in;margin-bottom:8px;display:block" onclick="showLightbox(this.src)">`).join('');
         proofWrap.style.display = 'block';
         noProof.style.display = 'none';
       } else {
+        proofWrap.innerHTML = '';
         proofWrap.style.display = 'none';
         noProof.style.display = 'block';
       }

@@ -33,8 +33,8 @@ export class Donation {
   @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
   amount: number | null;
 
-  @Column({ name: 'payment_proof_path', type: 'varchar', nullable: true })
-  paymentProofPath: string | null;
+  @Column({ name: 'payment_proof_paths', type: 'simple-json', nullable: true })
+  paymentProofPaths: string[];
 
   @Column({
     type: 'enum',
