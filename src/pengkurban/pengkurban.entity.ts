@@ -56,8 +56,8 @@ export class Pengkurban {
   @Column({ nullable: true })
   notes: string;
 
-  @Column({ name: 'payment_proof_path', type: 'varchar', nullable: true })
-  paymentProofPath: string | null;
+  @Column({ name: 'payment_proof_paths', type: 'simple-json', nullable: true })
+  paymentProofPaths: string[];
 
   @Column({ name: 'registration_number', unique: true })
   registrationNumber: string;
