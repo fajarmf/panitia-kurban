@@ -6,7 +6,7 @@ Full-stack aplikasi manajemen panitia kurban Masjid Al Hijrah CGE — registrasi
 
 - **Production:** https://kurban.masjidalhijrahcge.id
 - **Self-hosted** (bukan Railway/Vercel) — detail server di tangan panitia
-- **Database:** Neon PostgreSQL (`neondb`, shared dengan wa-bot). Host & kredensial di `/Users/fajarfirdaus/.claude/projects/-Users-fajarfirdaus-Development/memory/`.
+- **Database:** Neon PostgreSQL (`neondb`, shared dengan wa-bot). Host & kredensial simpan di env lokal / secret manager, jangan di-commit.
 
 ## Stack
 
@@ -46,8 +46,8 @@ NODE_ENV=production
 
 # WA notifier (opsional — skip silent kalau kosong)
 WA_BOT_URL=https://wa-bot-production-fcfe.up.railway.app
-WA_BOT_API_KEY=wa_key_kurban_1447
-WA_NOTIFY_PHONE=628127149927
+WA_BOT_API_KEY=<di env>
+WA_NOTIFY_PHONE=<nomor WA panitia, di env>
 ```
 
 ## Modul & Fitur
@@ -209,8 +209,6 @@ Service: `src/common/notifications/wa-notifier.service.ts` → POST ke wa-bot Ra
 - Fire-and-forget (non-blocking)
 - Error di-log, registrasi tetap sukses
 - Skip silent kalau env `WA_BOT_URL` / `WA_BOT_API_KEY` / `WA_NOTIFY_PHONE` belum di-set
-
-Config wa-bot ada di `/Users/fajarfirdaus/Development/wa-bot/CLAUDE.md`.
 
 ## Convention
 
