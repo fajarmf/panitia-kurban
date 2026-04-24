@@ -66,6 +66,12 @@ export class PengkurbanController {
     return this.pengkurbanService.verify(id, dto);
   }
 
+  @Patch(':id/infaq')
+  @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
+  markInfaq(@Param('id') id: string, @Body() body: { paid: boolean }) {
+    return this.pengkurbanService.markInfaqPaid(id, Boolean(body.paid));
+  }
+
   @Delete(':id')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
   remove(@Param('id') id: string) {
