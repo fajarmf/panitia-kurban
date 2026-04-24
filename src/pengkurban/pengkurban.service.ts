@@ -14,6 +14,7 @@ import { PublicRegisterDto } from './dto/public-register.dto';
 import { VerifyRegistrationDto } from './dto/verify-registration.dto';
 import { RegistrationStatus } from '../common/enums/registration-status.enum';
 import { WaNotifierService } from '../common/notifications/wa-notifier.service';
+import { getInfaqAmount } from '../common/constants/infaq';
 
 @Injectable()
 export class PengkurbanService {
@@ -44,6 +45,9 @@ export class PengkurbanService {
       'Ukuran Hewan',
       'Tipe Akad',
       'Harga',
+      'Infaq Operasional',
+      'Status Infaq',
+      'Tgl Infaq Lunas',
       'Status',
       'Telepon',
       'Catatan',
@@ -51,6 +55,7 @@ export class PengkurbanService {
       'Tahun',
     ].join(',');
     const rows = data.map((d) => {
+      const infaqAmount = getInfaqAmount(d.animalType);
       return [
         d.registrationNumber,
         d.name,
@@ -60,6 +65,9 @@ export class PengkurbanService {
         d.animalSize || '',
         d.purchaseType,
         d.price != null ? String(d.price) : '',
+        String(infaqAmount),
+        d.infaqPaid ? 'Lunas' : 'Belum',
+        d.infaqPaidAt ? d.infaqPaidAt.toISOString() : '',
         d.status,
         d.phone || '',
         d.notes || '',
@@ -70,6 +78,13 @@ export class PengkurbanService {
         .join(',');
     });
     return [header, ...rows].join('\n');
+  }
+
+  async markInfaqPaid(id: string, paid: boolean): Promise<Pengkurban> {
+    const pk = await this.findById(id);
+    pk.infaqPaid = paid;
+    pk.infaqPaidAt = paid ? new Date() : null;
+    return this.pengkurbanRepository.save(pk);
   }
 
   async findById(id: string): Promise<Pengkurban> {

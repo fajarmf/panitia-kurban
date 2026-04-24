@@ -71,6 +71,12 @@ export class Pengkurban {
   })
   status: RegistrationStatus;
 
+  @Column({ name: 'infaq_paid', type: 'boolean', default: false })
+  infaqPaid: boolean;
+
+  @Column({ name: 'infaq_paid_at', type: 'timestamptz', nullable: true })
+  infaqPaidAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

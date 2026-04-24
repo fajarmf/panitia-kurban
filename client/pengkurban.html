@@ -58,11 +58,12 @@
               <th>Alamat</th>
               <th>Bukti</th>
               <th>Status</th>
+              <th>Infaq</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="data-table">
-            <tr><td colspan="8" class="text-center py-8"><div class="spinner"></div></td></tr>
+            <tr><td colspan="9" class="text-center py-8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -153,6 +154,11 @@
       SAPI_PERORANGAN: 'Sapi Perorangan 🐄',
     };
     const purchaseLabels = { BELI_MASJID: 'Beli via Masjid', BAWA_SENDIRI: 'Bawa Sendiri' };
+    const INFAQ = {
+      DOMBA: 300000, KAMBING: 300000,
+      SAPI_KOLEKTIF: 300000, SAPI_KOLEKTIF_A: 300000, SAPI_KOLEKTIF_B: 300000,
+      SAPI_PERORANGAN: 1750000,
+    };
     const statusLabels = {
       PENDING_PAYMENT: 'Menunggu Pembayaran',
       PENDING_VERIFICATION: 'Menunggu Verifikasi',
@@ -188,7 +194,7 @@
 
         const tbody = document.getElementById('data-table');
         if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
           return;
         }
 
@@ -203,6 +209,12 @@
             ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${JSON.stringify(d)})'>Verifikasi</button>`
             : '';
 
+          const infaqAmt = INFAQ[d.animalType] || 0;
+          const infaqBadge = d.infaqPaid
+            ? `<span class="badge badge-active" title="Lunas ${d.infaqPaidAt ? new Date(d.infaqPaidAt).toLocaleDateString('id-ID') : ''}">✓ Lunas</span>`
+            : `<span class="badge badge-pending">Belum</span>`;
+          const infaqBtn = `<button class="btn-secondary btn-sm" onclick="toggleInfaq('${d.id}', ${!d.infaqPaid})">${d.infaqPaid ? 'Batalkan' : 'Tandai Lunas'}</button>`;
+
           return `<tr>
             <td class="text-xs font-mono text-emerald-300/70">${escHtml(d.registrationNumber || '—')}</td>
             <td class="font-semibold">${escHtml(d.name)}</td>
@@ -211,8 +223,13 @@
             <td class="text-xs text-white/60">${escHtml(d.address || '—')}</td>
             <td>${proofHtml}</td>
             <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
+            <td><div class="flex flex-col gap-1 items-start">
+              <span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>
+              ${infaqBadge}
+            </div></td>
             <td><div class="flex gap-2 flex-wrap">
               ${verifyBtn}
+              ${infaqBtn}
               <button class="btn-secondary btn-sm" onclick='editData(${JSON.stringify(d)})'>Edit</button>
               <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
             </div></td>
@@ -312,6 +329,17 @@
     }
 
     function closeVerifyModal() { document.getElementById('verify-modal').classList.remove('active'); }
+
+    async function toggleInfaq(id, paid) {
+      try {
+        await api(`/pengkurban/${id}/infaq`, {
+          method: 'PATCH',
+          body: JSON.stringify({ paid }),
+        });
+        showToast(paid ? 'Infaq ditandai lunas' : 'Status infaq dibatalkan');
+        loadData();
+      } catch (err) { showToast('Gagal update infaq: ' + err.message, 'error'); }
+    }
 
     async function openRekapModal() {
       const eventId = document.getElementById('event-filter').value;
