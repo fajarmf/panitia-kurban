@@ -1,5 +1,3 @@
-import { AnimalType } from './enums/animal-type.enum';
-
 export interface TierPrice {
   size: string;
   weight: string;
@@ -61,13 +59,4 @@ export const PRICING: PricingCatalog = {
     infaq: INFAQ_SAPI_PERORANGAN,
     note: 'Harga sesuai kesepakatan',
   },
-};
-
-export const INFAQ_BY_ANIMAL: Record<string, number> = {
-  [AnimalType.DOMBA]: INFAQ_KAMBING_DOMBA,
-  [AnimalType.KAMBING]: INFAQ_KAMBING_DOMBA,
-  [AnimalType.SAPI_KOLEKTIF]: INFAQ_SAPI_KOLEKTIF,
-  [AnimalType.SAPI_KOLEKTIF_A]: INFAQ_SAPI_KOLEKTIF,
-  [AnimalType.SAPI_KOLEKTIF_B]: INFAQ_SAPI_KOLEKTIF,
-  [AnimalType.SAPI_PERORANGAN]: INFAQ_SAPI_PERORANGAN,
 };
