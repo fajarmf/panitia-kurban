@@ -65,4 +65,22 @@ describe('RekapService', () => {
       expect(text).not.toContain('Rejected');
     });
   });
+
+  describe('getDonasiRekap — sukarela warga section', () => {
+    it('shows ✅ only for CONFIRMED donations', async () => {
+      pengkurbanRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({ name: 'Donor A', amount: 500000, status: 'CONFIRMED' as any }),
+        makeDonation({ name: 'Donor B', amount: 300000, status: 'PENDING_VERIFICATION' as any }),
+        makeDonation({ name: 'Donor C', amount: 100000, status: 'REJECTED' as any }),
+      ]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. Donor A 500 ribu ✅');
+      expect(text).toContain('2. Donor B 300 ribu');
+      expect(text).not.toContain('Donor B 300 ribu ✅');
+      expect(text).not.toContain('Donor C');
+    });
+  });
 });

@@ -151,12 +151,13 @@ export class RekapService {
     }
     lines.push(``);
 
-    // Sukarela Warga
+    // Sukarela Warga — semua active (non-REJECTED), ✅ kalau CONFIRMED
     lines.push(`• Sukarela Warga`);
     if (activeDonations.length) {
       activeDonations.forEach((d, i) => {
         const amt = formatRibu(d.amount == null ? null : Number(d.amount));
-        lines.push(`${i + 1}. ${d.name}${amt ? ' ' + amt : ''}`);
+        const check = d.status === ('CONFIRMED' as never) ? ' ✅' : '';
+        lines.push(`${i + 1}. ${d.name}${amt ? ' ' + amt : ''}${check}`);
       });
     } else {
       [1, 2, 3, 4, 5].forEach((i) => lines.push(`${i}. ...`));
