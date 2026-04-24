@@ -3,15 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pengkurban } from '../pengkurban/pengkurban.entity';
 import { Donation } from '../donations/donation.entity';
-
-const INFAQ: Record<string, number> = {
-  DOMBA: 300000,
-  KAMBING: 300000,
-  SAPI_KOLEKTIF: 300000,
-  SAPI_KOLEKTIF_A: 300000,
-  SAPI_KOLEKTIF_B: 300000,
-  SAPI_PERORANGAN: 1750000,
-};
+import { getInfaqAmount } from '../common/constants/infaq';
 
 function displayName(p: Pengkurban): string {
   return (p.shohibulName || p.name).split('\n')[0].trim();
@@ -19,7 +11,8 @@ function displayName(p: Pengkurban): string {
 
 function formatRibu(amount: number | null | undefined): string {
   if (amount == null || amount === 0) return '';
-  if (amount >= 1_000_000 && amount % 1_000_000 === 0) return `${amount / 1_000_000} juta`;
+  if (amount >= 1_000_000 && amount % 1_000_000 === 0)
+    return `${amount / 1_000_000} juta`;
   if (amount % 1000 === 0) return `${amount / 1000} ribu`;
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }
@@ -55,9 +48,15 @@ export class RekapService {
     const data = await this.fetchPengkurban(eventId);
     const active = data.filter((d) => d.status !== ('REJECTED' as never));
 
-    const sapiA = active.filter((d) => d.animalType === ('SAPI_KOLEKTIF_A' as never));
-    const sapiB = active.filter((d) => d.animalType === ('SAPI_KOLEKTIF_B' as never));
-    const sapiLegacy = active.filter((d) => d.animalType === ('SAPI_KOLEKTIF' as never));
+    const sapiA = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF_A' as never),
+    );
+    const sapiB = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF_B' as never),
+    );
+    const sapiLegacy = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF' as never),
+    );
     const sapiPerorangan = active.filter(
       (d) => d.animalType === ('SAPI_PERORANGAN' as never),
     );
@@ -132,19 +131,20 @@ export class RekapService {
     const activeDonations = donations.filter(
       (d) => d.status !== ('REJECTED' as never),
     );
-    const pkConfirmed = pengkurban.filter(
-      (d) => d.status === ('CONFIRMED' as never),
-    );
 
     const lines: string[] = [`*List Sumbangan Kegiatan Idul Qurban*`, ``];
 
-    // Sohibul Qurban (dari pengkurban confirmed — infaq operasional)
+    // Sohibul Qurban — semua active (non-REJECTED), ✅ kalau infaq_paid
+    const pkActive = pengkurban.filter(
+      (d) => d.status !== ('REJECTED' as never),
+    );
     lines.push(`• Sohibul Qurban`);
-    if (pkConfirmed.length) {
-      pkConfirmed.forEach((d, i) => {
+    if (pkActive.length) {
+      pkActive.forEach((d, i) => {
         const name = displayName(d);
-        const amt = formatRibu(INFAQ[d.animalType as string] ?? 0);
-        lines.push(`${i + 1}. ${name}${amt ? ' ' + amt : ''}`);
+        const amt = formatRibu(getInfaqAmount(d.animalType as string));
+        const check = d.infaqPaid ? ' ✅' : '';
+        lines.push(`${i + 1}. ${name}${amt ? ' ' + amt : ''}${check}`);
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));

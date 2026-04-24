@@ -43,4 +43,26 @@ describe('RekapService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  describe('getDonasiRekap — sohibul section', () => {
+    it('shows all non-rejected pengkurban with ✅ only when infaqPaid=true', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Confirmed Lunas', status: 'CONFIRMED' as any, infaqPaid: true }),
+        makePk({ name: 'Confirmed Belum', status: 'CONFIRMED' as any, infaqPaid: false }),
+        makePk({ name: 'Pending Lunas', status: 'PENDING_PAYMENT' as any, infaqPaid: true }),
+        makePk({ name: 'Pending Belum', status: 'PENDING_PAYMENT' as any, infaqPaid: false }),
+        makePk({ name: 'Rejected', status: 'REJECTED' as any, infaqPaid: false }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. Confirmed Lunas 300 ribu ✅');
+      expect(text).toContain('2. Confirmed Belum 300 ribu');
+      expect(text).not.toContain('Confirmed Belum 300 ribu ✅');
+      expect(text).toContain('3. Pending Lunas 300 ribu ✅');
+      expect(text).toContain('4. Pending Belum 300 ribu');
+      expect(text).not.toContain('Rejected');
+    });
+  });
 });
