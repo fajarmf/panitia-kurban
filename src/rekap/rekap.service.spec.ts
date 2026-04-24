@@ -114,4 +114,22 @@ describe('RekapService', () => {
       expect(text).toContain('3. Pending Lunas ✅');
     });
   });
+
+  describe('getPengkurbanRekap — kambing/domba tier', () => {
+    it('shows tier from animalSize per row', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Hadi', animalType: 'DOMBA' as any, animalSize: 'Tipe A', infaqPaid: false }),
+        makePk({ name: 'Siti', animalType: 'KAMBING' as any, animalSize: 'Tipe B', infaqPaid: true }),
+        makePk({ name: 'Budi', animalType: 'KAMBING' as any, animalSize: null, infaqPaid: false }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('1. Hadi (Domba - Tipe A)');
+      expect(text).toContain('2. Siti (Kambing - Tipe B) ✅');
+      expect(text).toContain('3. Budi (Kambing)');
+      expect(text).not.toContain('Budi (Kambing - null)');
+      expect(text).not.toContain('Budi (Kambing - )');
+    });
+  });
 });

@@ -107,7 +107,8 @@ export class RekapService {
     if (kambingDomba.length) {
       kambingDomba.forEach((d, i) => {
         const jenis = d.animalType === ('DOMBA' as never) ? 'Domba' : 'Kambing';
-        lines.push(`${i + 1}. ${displayName(d)} (${jenis})${check(d)}`);
+        const tier = d.animalSize ? ` - ${d.animalSize}` : '';
+        lines.push(`${i + 1}. ${displayName(d)} (${jenis}${tier})${check(d)}`);
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
