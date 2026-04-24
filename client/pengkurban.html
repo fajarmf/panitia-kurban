@@ -55,6 +55,7 @@
               <th>Nama Pendaftar</th>
               <th>Atas Nama Qurban</th>
               <th>Jenis Hewan</th>
+              <th>Perkiraan Total</th>
               <th>Alamat</th>
               <th>Bukti</th>
               <th>Status</th>
@@ -63,7 +64,7 @@
             </tr>
           </thead>
           <tbody id="data-table">
-            <tr><td colspan="9" class="text-center py-8"><div class="spinner"></div></td></tr>
+            <tr><td colspan="10" class="text-center py-8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -154,11 +155,58 @@
       SAPI_PERORANGAN: 'Sapi Perorangan 🐄',
     };
     const purchaseLabels = { BELI_MASJID: 'Beli via Masjid', BAWA_SENDIRI: 'Bawa Sendiri' };
-    const INFAQ = {
-      DOMBA: 300000, KAMBING: 300000,
-      SAPI_KOLEKTIF: 300000, SAPI_KOLEKTIF_A: 300000, SAPI_KOLEKTIF_B: 300000,
-      SAPI_PERORANGAN: 1750000,
-    };
+    let PRICING = null;
+    async function loadPricingCatalog() {
+      try {
+        const res = await fetch('/api/public/pricing');
+        PRICING = await res.json();
+      } catch (e) {
+        console.error('[pricing-catalog]', e.stack || e.message);
+        PRICING = null;
+      }
+    }
+
+    function getInfaq(animalType) {
+      if (!PRICING) return 0;
+      if (animalType === 'SAPI_PERORANGAN') return PRICING.sapiPerorangan.infaq;
+      if (animalType === 'SAPI_KOLEKTIF_A') return PRICING.sapiKolektif.opsiA.infaq;
+      if (animalType === 'SAPI_KOLEKTIF_B') return PRICING.sapiKolektif.opsiB.infaq;
+      if (animalType === 'SAPI_KOLEKTIF') return PRICING.sapiKolektif.opsiA.infaq;
+      if (animalType === 'KAMBING' || animalType === 'DOMBA') return PRICING.kambing[0].infaq;
+      return 0;
+    }
+
+    function computeExpectedTotal(row) {
+      if (!PRICING) return '(loading...)';
+      const at = row.animalType;
+      const infaq = getInfaq(at);
+      const fmt = (n) => n.toLocaleString('id-ID');
+
+      if (at === 'SAPI_KOLEKTIF_A') {
+        return `Rp ${fmt(PRICING.sapiKolektif.opsiA.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiA.perOrang)}+${fmt(infaq)})</span>`;
+      }
+      if (at === 'SAPI_KOLEKTIF_B') {
+        return `Rp ${fmt(PRICING.sapiKolektif.opsiB.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiB.perOrang)}+${fmt(infaq)})</span>`;
+      }
+      if (at === 'SAPI_PERORANGAN') {
+        if (row.price == null) return '<span class="text-yellow-400">(harga belum diisi)</span>';
+        const p = Number(row.price);
+        return `Rp ${fmt(p + infaq)} <span class="text-white/50 text-xs">(${fmt(p)}+${fmt(infaq)})</span>`;
+      }
+      if (at === 'KAMBING' || at === 'DOMBA') {
+        const catalog = at === 'KAMBING' ? PRICING.kambing : PRICING.domba;
+        const tier = catalog.find(t => t.size === row.animalSize);
+        if (!tier) return '<span class="text-yellow-400">(tier belum diisi)</span>';
+        if (tier.price != null) {
+          return `Rp ${fmt(tier.price + infaq)} <span class="text-white/50 text-xs">(${fmt(tier.price)}+${fmt(infaq)})</span>`;
+        }
+        if (tier.priceMin != null) {
+          return `Rp ${fmt(tier.priceMin + infaq)}-${fmt(tier.priceMax + infaq)} <span class="text-white/50 text-xs">(range ${tier.size})</span>`;
+        }
+        return `<span class="text-white/70">${tier.priceNote || '-'}</span>`;
+      }
+      return '-';
+    }
     const statusLabels = {
       PENDING_PAYMENT: 'Menunggu Pembayaran',
       PENDING_VERIFICATION: 'Menunggu Verifikasi',
@@ -180,7 +228,8 @@
     const urlStatus = new URLSearchParams(location.search).get('status');
     if (urlStatus) document.getElementById('status-filter').value = urlStatus;
 
-    loadEventOptions('event-filter', true).then(() => loadData());
+    Promise.all([loadPricingCatalog(), loadEventOptions('event-filter', true)])
+      .then(() => loadData());
     loadEventOptions('form-event');
 
     async function loadData() {
@@ -194,7 +243,7 @@
 
         const tbody = document.getElementById('data-table');
         if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
           return;
         }
 
@@ -209,7 +258,7 @@
             ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${JSON.stringify(d)})'>Verifikasi</button>`
             : '';
 
-          const infaqAmt = INFAQ[d.animalType] || 0;
+          const infaqAmt = getInfaq(d.animalType);
           const infaqBadge = d.infaqPaid
             ? `<span class="badge badge-active" title="Lunas ${d.infaqPaidAt ? new Date(d.infaqPaidAt).toLocaleDateString('id-ID') : ''}">✓ Lunas</span>`
             : `<span class="badge badge-pending">Belum</span>`;
@@ -220,6 +269,7 @@
             <td class="font-semibold">${escHtml(d.name)}</td>
             <td class="text-xs text-white/70">${escHtml(d.shohibulName || '—')}</td>
             <td>${escHtml(animalLabels[d.animalType] || d.animalType)}</td>
+            <td class="text-xs text-white/70">${computeExpectedTotal(d)}</td>
             <td class="text-xs text-white/60">${escHtml(d.address || '—')}</td>
             <td>${proofHtml}</td>
             <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>

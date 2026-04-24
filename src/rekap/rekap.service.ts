@@ -3,15 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Pengkurban } from '../pengkurban/pengkurban.entity';
 import { Donation } from '../donations/donation.entity';
-
-const INFAQ: Record<string, number> = {
-  DOMBA: 300000,
-  KAMBING: 300000,
-  SAPI_KOLEKTIF: 300000,
-  SAPI_KOLEKTIF_A: 300000,
-  SAPI_KOLEKTIF_B: 300000,
-  SAPI_PERORANGAN: 1750000,
-};
+import { getInfaqAmount } from '../common/constants/infaq';
 
 function displayName(p: Pengkurban): string {
   return (p.shohibulName || p.name).split('\n')[0].trim();
@@ -19,7 +11,8 @@ function displayName(p: Pengkurban): string {
 
 function formatRibu(amount: number | null | undefined): string {
   if (amount == null || amount === 0) return '';
-  if (amount >= 1_000_000 && amount % 1_000_000 === 0) return `${amount / 1_000_000} juta`;
+  if (amount >= 1_000_000 && amount % 1_000_000 === 0)
+    return `${amount / 1_000_000} juta`;
   if (amount % 1000 === 0) return `${amount / 1000} ribu`;
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }
@@ -55,9 +48,15 @@ export class RekapService {
     const data = await this.fetchPengkurban(eventId);
     const active = data.filter((d) => d.status !== ('REJECTED' as never));
 
-    const sapiA = active.filter((d) => d.animalType === ('SAPI_KOLEKTIF_A' as never));
-    const sapiB = active.filter((d) => d.animalType === ('SAPI_KOLEKTIF_B' as never));
-    const sapiLegacy = active.filter((d) => d.animalType === ('SAPI_KOLEKTIF' as never));
+    const sapiA = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF_A' as never),
+    );
+    const sapiB = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF_B' as never),
+    );
+    const sapiLegacy = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF' as never),
+    );
     const sapiPerorangan = active.filter(
       (d) => d.animalType === ('SAPI_PERORANGAN' as never),
     );
@@ -68,7 +67,7 @@ export class RekapService {
     );
 
     const check = (d: Pengkurban) =>
-      d.status === ('CONFIRMED' as never) ? ' ✅' : '';
+      d.infaqPaid ? ' ✅' : '';
 
     const lines: string[] = [
       `*Daftar Pengkurban*`,
@@ -108,7 +107,8 @@ export class RekapService {
     if (kambingDomba.length) {
       kambingDomba.forEach((d, i) => {
         const jenis = d.animalType === ('DOMBA' as never) ? 'Domba' : 'Kambing';
-        lines.push(`${i + 1}. ${displayName(d)} (${jenis})${check(d)}`);
+        const tier = d.animalSize ? ` - ${d.animalSize}` : '';
+        lines.push(`${i + 1}. ${displayName(d)} (${jenis}${tier})${check(d)}`);
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
@@ -132,31 +132,33 @@ export class RekapService {
     const activeDonations = donations.filter(
       (d) => d.status !== ('REJECTED' as never),
     );
-    const pkConfirmed = pengkurban.filter(
-      (d) => d.status === ('CONFIRMED' as never),
-    );
 
     const lines: string[] = [`*List Sumbangan Kegiatan Idul Qurban*`, ``];
 
-    // Sohibul Qurban (dari pengkurban confirmed — infaq operasional)
+    // Sohibul Qurban — semua active (non-REJECTED), ✅ kalau infaq_paid
+    const pkActive = pengkurban.filter(
+      (d) => d.status !== ('REJECTED' as never),
+    );
     lines.push(`• Sohibul Qurban`);
-    if (pkConfirmed.length) {
-      pkConfirmed.forEach((d, i) => {
+    if (pkActive.length) {
+      pkActive.forEach((d, i) => {
         const name = displayName(d);
-        const amt = formatRibu(INFAQ[d.animalType as string] ?? 0);
-        lines.push(`${i + 1}. ${name}${amt ? ' ' + amt : ''}`);
+        const amt = formatRibu(getInfaqAmount(d.animalType as string));
+        const check = d.infaqPaid ? ' ✅' : '';
+        lines.push(`${i + 1}. ${name}${amt ? ' ' + amt : ''}${check}`);
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
     }
     lines.push(``);
 
-    // Sukarela Warga
+    // Sukarela Warga — semua active (non-REJECTED), ✅ kalau CONFIRMED
     lines.push(`• Sukarela Warga`);
     if (activeDonations.length) {
       activeDonations.forEach((d, i) => {
         const amt = formatRibu(d.amount == null ? null : Number(d.amount));
-        lines.push(`${i + 1}. ${d.name}${amt ? ' ' + amt : ''}`);
+        const check = d.status === ('CONFIRMED' as never) ? ' ✅' : '';
+        lines.push(`${i + 1}. ${d.name}${amt ? ' ' + amt : ''}${check}`);
       });
     } else {
       [1, 2, 3, 4, 5].forEach((i) => lines.push(`${i}. ...`));
@@ -167,9 +169,11 @@ export class RekapService {
       `Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11`,
     );
     lines.push(``);
+    lines.push(`Donasi online: https://kurban.masjidalhijrahcge.id/donate.html`);
+    lines.push(``);
     lines.push(`Konfirmasi`);
     lines.push(
-      `di: https://kurban.masjidalhijrahcge.id  atau Whatsapp ke @Fajar Firdaus (0812-7149-927).`,
+      `di: https://kurban.masjidalhijrahcge.id  atau Whatsapp ke Fajar Firdaus (0812-7149-927) / Panitia Kurban (0851-2151-9870).`,
     );
     lines.push(``);
     lines.push(`Jazakumullahu Khairan.`);
