@@ -9,7 +9,7 @@ describe('PublicPengkurbanController.getPricing', () => {
   });
 
   it('returns infaq field per tier for domba/kambing', () => {
-    const result = controller.getPricing() as PricingCatalog;
+    const result = controller.getPricing();
     expect(result.domba[0].infaq).toBe(300_000);
     expect(result.kambing[0].infaq).toBe(300_000);
     expect(result.domba.every((t) => t.infaq === 300_000)).toBe(true);
@@ -17,13 +17,25 @@ describe('PublicPengkurbanController.getPricing', () => {
   });
 
   it('returns infaq for sapi kolektif opsi A & B', () => {
-    const result = controller.getPricing() as PricingCatalog;
+    const result = controller.getPricing();
     expect(result.sapiKolektif.opsiA.infaq).toBe(300_000);
     expect(result.sapiKolektif.opsiB.infaq).toBe(300_000);
   });
 
   it('returns infaq for sapi perorangan', () => {
-    const result = controller.getPricing() as PricingCatalog;
+    const result = controller.getPricing();
     expect(result.sapiPerorangan.infaq).toBe(1_750_000);
+  });
+
+  it('preserves backward-compat fields for daftar.html consumer', () => {
+    const result: any = controller.getPricing();
+    expect(result.infaqOperasional.dombaKambing).toBe(300_000);
+    expect(result.infaqOperasional.sapiKolektifPerOrang).toBe(300_000);
+    expect(result.infaqOperasional.sapiPerorangan).toBe(1_750_000);
+    expect(result.sapiPerorangan.pricePerKg.min).toBe(65_000);
+    expect(result.sapiPerorangan.pricePerKg.max).toBe(80_000);
+    expect(result.rekening.bank).toBe('Bank Muamalat');
+    expect(result.rekening.nomor).toBe('12 1010 4479');
+    expect(result.rekening.atasNama).toBe('Masjid Al Hijrah CGE 11');
   });
 });
