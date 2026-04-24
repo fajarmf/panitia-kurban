@@ -168,9 +168,11 @@ export class RekapService {
       `Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11`,
     );
     lines.push(``);
+    lines.push(`Donasi online: https://kurban.masjidalhijrahcge.id/donate.html`);
+    lines.push(``);
     lines.push(`Konfirmasi`);
     lines.push(
-      `di: https://kurban.masjidalhijrahcge.id  atau Whatsapp ke @Fajar Firdaus (0812-7149-927).`,
+      `di: https://kurban.masjidalhijrahcge.id  atau Whatsapp ke Fajar Firdaus (0812-7149-927) / Panitia Kurban (0851-2151-9870).`,
     );
     lines.push(``);
     lines.push(`Jazakumullahu Khairan.`);

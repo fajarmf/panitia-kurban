@@ -83,4 +83,18 @@ describe('RekapService', () => {
       expect(text).not.toContain('Donor C');
     });
   });
+
+  describe('getDonasiRekap — footer', () => {
+    it('includes rekening + donate link + dual phone', async () => {
+      pengkurbanRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11');
+      expect(text).toContain('Donasi online: https://kurban.masjidalhijrahcge.id/donate.html');
+      expect(text).toContain('Fajar Firdaus (0812-7149-927)');
+      expect(text).toContain('Panitia Kurban (0851-2151-9870)');
+    });
+  });
 });
