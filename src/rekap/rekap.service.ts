@@ -67,7 +67,7 @@ export class RekapService {
     );
 
     const check = (d: Pengkurban) =>
-      d.status === ('CONFIRMED' as never) ? ' ✅' : '';
+      d.infaqPaid ? ' ✅' : '';
 
     const lines: string[] = [
       `*Daftar Pengkurban*`,

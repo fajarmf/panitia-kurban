@@ -97,4 +97,21 @@ describe('RekapService', () => {
       expect(text).toContain('Panitia Kurban (0851-2151-9870)');
     });
   });
+
+  describe('getPengkurbanRekap — ✅ logic', () => {
+    it('✅ based on infaqPaid, not status', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Confirmed Lunas', animalType: 'SAPI_KOLEKTIF_A' as any, status: 'CONFIRMED' as any, infaqPaid: true }),
+        makePk({ name: 'Confirmed Belum', animalType: 'SAPI_KOLEKTIF_A' as any, status: 'CONFIRMED' as any, infaqPaid: false }),
+        makePk({ name: 'Pending Lunas', animalType: 'SAPI_KOLEKTIF_A' as any, status: 'PENDING_PAYMENT' as any, infaqPaid: true }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('1. Confirmed Lunas ✅');
+      expect(text).toContain('2. Confirmed Belum');
+      expect(text).not.toContain('Confirmed Belum ✅');
+      expect(text).toContain('3. Pending Lunas ✅');
+    });
+  });
 });
