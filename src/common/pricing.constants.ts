@@ -25,8 +25,19 @@ export interface PricingCatalog {
     jenisSapi: string;
   };
   sapiPerorangan: {
+    pricePerKg: { min: number; max: number };
     infaq: number;
     note: string;
+  };
+  infaqOperasional: {
+    dombaKambing: number;
+    sapiKolektifPerOrang: number;
+    sapiPerorangan: number;
+  };
+  rekening: {
+    bank: string;
+    nomor: string;
+    atasNama: string;
   };
 }
 
@@ -56,7 +67,18 @@ export const PRICING: PricingCatalog = {
     jenisSapi: 'Sapi Bali',
   },
   sapiPerorangan: {
+    pricePerKg: { min: 65_000, max: 80_000 },
     infaq: INFAQ_SAPI_PERORANGAN,
-    note: 'Harga sesuai kesepakatan',
+    note: 'Kisaran harga Rp 65.000 – 80.000/kg',
+  },
+  infaqOperasional: {
+    dombaKambing: INFAQ_KAMBING_DOMBA,
+    sapiKolektifPerOrang: INFAQ_SAPI_KOLEKTIF,
+    sapiPerorangan: INFAQ_SAPI_PERORANGAN,
+  },
+  rekening: {
+    bank: 'Bank Muamalat',
+    nomor: '12 1010 4479',
+    atasNama: 'Masjid Al Hijrah CGE 11',
   },
 };
