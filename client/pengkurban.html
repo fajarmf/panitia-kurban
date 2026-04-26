@@ -221,7 +221,7 @@
     };
 
     function escHtml(str) {
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
     // Pre-apply status filter from URL param (e.g. from dashboard quick-link)
@@ -255,7 +255,7 @@
 
           const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
           const verifyBtn = canVerify
-            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${JSON.stringify(d)})'>Verifikasi</button>`
+            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${escHtml(JSON.stringify(d))})'>Verifikasi</button>`
             : '';
 
           const infaqAmt = getInfaq(d.animalType);
@@ -280,7 +280,7 @@
             <td><div class="flex gap-2 flex-wrap">
               ${verifyBtn}
               ${infaqBtn}
-              <button class="btn-secondary btn-sm" onclick='editData(${JSON.stringify(d)})'>Edit</button>
+              <button class="btn-secondary btn-sm" onclick='editData(${escHtml(JSON.stringify(d))})'>Edit</button>
               <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
             </div></td>
           </tr>`;
