@@ -665,7 +665,7 @@ async function main() {
 main().catch((e) => { console.error(e); process.exit(1); });
 ```
 
-Run (requires DB env): `DB_HOST=ep-sweet-hall-aony4lne-pooler.c-2.ap-southeast-1.aws.neon.tech DB_USER=neondb_owner DB_PASSWORD=npg_rhz6HYVkjq2D DB_NAME=neondb DB_PORT=5432 node -r ts-node/register /tmp/check-rekap.ts`
+Run (requires DB env vars set — DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT): `node -r ts-node/register /tmp/check-rekap.ts`. Don't paste secrets in CLI history; source from `.env` instead (e.g. `set -a; source .env; set +a; node ...`).
 
 Expected output: pengkurban rekap menampilkan 3 CONFIRMED dengan ✅ (Asep, Margono, Andika); kambing/domba section menampilkan `Hadi Yuda (Domba - Tipe A)` dan `Harmansah (Kambing)`. Donasi rekap menampilkan 8 sohibul + 1 donor Fajar, plus footer dual phone + donate link.
 
