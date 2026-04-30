@@ -107,8 +107,19 @@ export class RekapService {
     if (kambingDomba.length) {
       kambingDomba.forEach((d, i) => {
         const jenis = d.animalType === ('DOMBA' as never) ? 'Domba' : 'Kambing';
-        const tier = d.animalSize ? ` - ${d.animalSize}` : '';
-        lines.push(`${i + 1}. ${displayName(d)} (${jenis}${tier})${check(d)}`);
+        const isBawaSendiri = d.purchaseType === ('BAWA_SENDIRI' as never);
+        // animal_size legacy yg berisi "bawa sendiri" (manual workaround sebelum
+        // logic ini ada) di-skip biar ga dobel.
+        const sizeStr =
+          d.animalSize && !/bawa\s*sendiri/i.test(d.animalSize)
+            ? d.animalSize
+            : '';
+        const suffix = isBawaSendiri
+          ? ` - Bawa sendiri${sizeStr ? ' ' + sizeStr : ''}`
+          : sizeStr
+            ? ` - ${sizeStr}`
+            : '';
+        lines.push(`${i + 1}. ${displayName(d)} (${jenis}${suffix})${check(d)}`);
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
