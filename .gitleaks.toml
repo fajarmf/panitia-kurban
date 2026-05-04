@@ -1,0 +1,45 @@
+# gitleaks config — panitia-kurban
+# Catch project-specific secret patterns before commit.
+# Usage: gitleaks protect --staged (in pre-commit hook)
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "neon-db-password"
+description = "Neon PostgreSQL password (npg_*)"
+regex = '''npg_[A-Za-z0-9]{12,}'''
+tags = ["secret", "database"]
+
+[[rules]]
+id = "wa-bot-api-key"
+description = "wa-bot HTTP API key"
+regex = '''wa_key_[A-Za-z0-9]{16,}'''
+tags = ["secret", "api"]
+
+[[rules]]
+id = "jwt-secret-hex"
+description = "JWT secret (64-hex)"
+regex = '''[a-f0-9]{64}'''
+tags = ["secret", "jwt"]
+
+[[rules]]
+id = "panitia-username-password"
+description = "panitia-kurban service password literal"
+regex = '''NY7CCBn[A-Za-z0-9]+'''
+tags = ["secret"]
+
+[allowlist]
+description = "Ignore example/placeholder values"
+regexes = [
+  '''<secret[^>]*>''',
+  '''\$\{[A-Z_]+\}''',
+  '''process\.env\.[A-Z_]+''',
+]
+paths = [
+  '''(.+/)?node_modules/''',
+  '''(.+/)?\.git/''',
+  '''(.+/)?dist/''',
+  '''(.+/)?uploads/''',
+  '''package-lock\.json''',
+]
