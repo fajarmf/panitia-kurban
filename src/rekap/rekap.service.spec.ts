@@ -132,4 +132,53 @@ describe('RekapService', () => {
       expect(text).not.toContain('Budi (Kambing - )');
     });
   });
+
+  describe('getPengkurbanRekap — info pemesanan section', () => {
+    const ORIGINAL_ENV = process.env.REKAP_INFO_PEMESANAN;
+    afterEach(() => {
+      if (ORIGINAL_ENV === undefined) {
+        delete process.env.REKAP_INFO_PEMESANAN;
+      } else {
+        process.env.REKAP_INFO_PEMESANAN = ORIGINAL_ENV;
+      }
+    });
+
+    it('renders section when REKAP_INFO_PEMESANAN env is set', async () => {
+      process.env.REKAP_INFO_PEMESANAN = 'TEST_INFO_BLOCK_MARKER\nLine 2';
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Test', animalType: 'KAMBING' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('TEST_INFO_BLOCK_MARKER');
+      expect(text).toContain('Line 2');
+      expect(text.indexOf('TEST_INFO_BLOCK_MARKER')).toBeLessThan(
+        text.indexOf('Jazakumullahu Khairan.'),
+      );
+    });
+
+    it('skips section when REKAP_INFO_PEMESANAN env is unset', async () => {
+      delete process.env.REKAP_INFO_PEMESANAN;
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Test', animalType: 'KAMBING' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).not.toContain('Informasi Pemesanan');
+      expect(text).not.toContain('TEST_INFO_BLOCK_MARKER');
+    });
+
+    it('skips section when REKAP_INFO_PEMESANAN env is empty/whitespace', async () => {
+      process.env.REKAP_INFO_PEMESANAN = '   ';
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Test', animalType: 'KAMBING' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).not.toContain('Informasi Pemesanan');
+    });
+  });
 });

@@ -126,6 +126,12 @@ export class RekapService {
     }
     lines.push(``);
 
+    const infoPemesanan = process.env.REKAP_INFO_PEMESANAN?.trim();
+    if (infoPemesanan) {
+      lines.push(infoPemesanan);
+      lines.push(``);
+    }
+
     lines.push(`Jazakumullahu Khairan.`);
     lines.push(``);
     lines.push(`Panitia Idul Adha 1447 H`);
