@@ -115,6 +115,39 @@ describe('RekapService', () => {
     });
   });
 
+  describe('getPengkurbanRekap — sapi kolektif tiers', () => {
+    it('renders Sapi C section when there is SAPI_KOLEKTIF_C pengkurban', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Adi', animalType: 'SAPI_KOLEKTIF_C' as any, infaqPaid: true }),
+        makePk({ name: 'Bea', animalType: 'SAPI_KOLEKTIF_C' as any, infaqPaid: false }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('• Sapi C 320 - 350 Kg Rp 3.500.000 / orang');
+      expect(text).toContain('1. Adi ✅');
+      expect(text).toContain('2. Bea');
+      expect(text).not.toContain('Bea ✅');
+    });
+
+    it('renders all three sapi kolektif sections in A → B → C order', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'C-person', animalType: 'SAPI_KOLEKTIF_C' as any }),
+        makePk({ name: 'A-person', animalType: 'SAPI_KOLEKTIF_A' as any }),
+        makePk({ name: 'B-person', animalType: 'SAPI_KOLEKTIF_B' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      const idxA = text.indexOf('Sapi A 350 - 400 Kg');
+      const idxB = text.indexOf('Sapi B 320 - 350 Kg');
+      const idxC = text.indexOf('Sapi C 320 - 350 Kg');
+      expect(idxA).toBeGreaterThan(-1);
+      expect(idxB).toBeGreaterThan(idxA);
+      expect(idxC).toBeGreaterThan(idxB);
+    });
+  });
+
   describe('getPengkurbanRekap — kambing/domba tier', () => {
     it('shows tier from animalSize per row', async () => {
       pengkurbanRepo.find.mockResolvedValue([

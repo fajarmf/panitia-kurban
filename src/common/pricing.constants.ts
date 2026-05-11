@@ -21,6 +21,7 @@ export interface PricingCatalog {
   sapiKolektif: {
     opsiA: SapiKolektifOption;
     opsiB: SapiKolektifOption;
+    opsiC: SapiKolektifOption;
     orangPerEkor: number;
     jenisSapi: string;
   };
@@ -123,6 +124,14 @@ export const PRICING: PricingCatalog = {
       perOrang: 3_500_000,
       beratSapi: '320-350 kg',
       label: 'Sapi B',
+      infaq: INFAQ_SAPI_KOLEKTIF,
+    },
+    // opsiC: spec identik dengan opsiB. Murni grouping label — di grup WA
+    // sapi kedua/ketiga di tier B di-sebut "Sapi C" (B-1, B-2 secara informal).
+    opsiC: {
+      perOrang: 3_500_000,
+      beratSapi: '320-350 kg',
+      label: 'Sapi C',
       infaq: INFAQ_SAPI_KOLEKTIF,
     },
     orangPerEkor: 7,
