@@ -87,6 +87,7 @@
             <option value="KAMBING">Kambing 🐐</option>
             <option value="SAPI_KOLEKTIF_A">Sapi Kolektif A — 350-400 kg 🐄</option>
             <option value="SAPI_KOLEKTIF_B">Sapi Kolektif B — 320-350 kg 🐄</option>
+            <option value="SAPI_KOLEKTIF_C">Sapi Kolektif C — 320-350 kg 🐄</option>
             <option value="SAPI_PERORANGAN">Sapi Perorangan 🐄</option>
           </select>
         </div>
@@ -152,6 +153,7 @@
       SAPI: 'Sapi 🐄', KAMBING: 'Kambing 🐐', DOMBA: 'Domba 🐑',
       SAPI_KOLEKTIF: 'Sapi Kolektif 🐄',
       SAPI_KOLEKTIF_A: 'Sapi Kolektif A 🐄', SAPI_KOLEKTIF_B: 'Sapi Kolektif B 🐄',
+      SAPI_KOLEKTIF_C: 'Sapi Kolektif C 🐄',
       SAPI_PERORANGAN: 'Sapi Perorangan 🐄',
     };
     const purchaseLabels = { BELI_MASJID: 'Beli via Masjid', BAWA_SENDIRI: 'Bawa Sendiri' };
@@ -171,6 +173,7 @@
       if (animalType === 'SAPI_PERORANGAN') return PRICING.sapiPerorangan.infaq;
       if (animalType === 'SAPI_KOLEKTIF_A') return PRICING.sapiKolektif.opsiA.infaq;
       if (animalType === 'SAPI_KOLEKTIF_B') return PRICING.sapiKolektif.opsiB.infaq;
+      if (animalType === 'SAPI_KOLEKTIF_C') return PRICING.sapiKolektif.opsiC.infaq;
       if (animalType === 'SAPI_KOLEKTIF') return PRICING.sapiKolektif.opsiA.infaq;
       if (animalType === 'KAMBING' || animalType === 'DOMBA') return PRICING.kambing[0].infaq;
       return 0;
@@ -187,6 +190,9 @@
       }
       if (at === 'SAPI_KOLEKTIF_B') {
         return `Rp ${fmt(PRICING.sapiKolektif.opsiB.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiB.perOrang)}+${fmt(infaq)})</span>`;
+      }
+      if (at === 'SAPI_KOLEKTIF_C') {
+        return `Rp ${fmt(PRICING.sapiKolektif.opsiC.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiC.perOrang)}+${fmt(infaq)})</span>`;
       }
       if (at === 'SAPI_PERORANGAN') {
         if (row.price == null) return '<span class="text-yellow-400">(harga belum diisi)</span>';

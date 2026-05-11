@@ -54,6 +54,9 @@ export class RekapService {
     const sapiB = active.filter(
       (d) => d.animalType === ('SAPI_KOLEKTIF_B' as never),
     );
+    const sapiC = active.filter(
+      (d) => d.animalType === ('SAPI_KOLEKTIF_C' as never),
+    );
     const sapiLegacy = active.filter(
       (d) => d.animalType === ('SAPI_KOLEKTIF' as never),
     );
@@ -86,10 +89,11 @@ export class RekapService {
       lines.push(``);
     };
 
-    if (sapiA.length || sapiB.length || sapiLegacy.length) {
+    if (sapiA.length || sapiB.length || sapiC.length || sapiLegacy.length) {
       lines.push(`Qurban Sapi Kolektif`);
       renderKolektif(sapiA, `• Sapi A 350 - 400 Kg Rp 4.000.000 / orang`);
       renderKolektif(sapiB, `• Sapi B 320 - 350 Kg Rp 3.500.000 / orang`);
+      renderKolektif(sapiC, `• Sapi C 320 - 350 Kg Rp 3.500.000 / orang`);
       if (sapiLegacy.length) renderKolektif(sapiLegacy, `• Sapi Kolektif`);
     }
 
