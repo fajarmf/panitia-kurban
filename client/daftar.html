@@ -348,8 +348,7 @@
               <div class="info-box warning">
                 <div style="font-weight:600;margin-bottom:0.25rem">Sapi Kolektif — 1/7 slot</div>
                 <div id="kolektif-price-info">Biaya per orang: <strong>Rp 4.000.000</strong></div>
-                <div style="font-size:0.8rem;color:rgba(255,255,255,0.65);margin-top:0.25rem">Sapi Bali 350-400 kg, 7
-                  orang per ekor</div>
+                <div id="kolektif-spec-info" style="font-size:0.8rem;color:rgba(255,255,255,0.65);margin-top:0.25rem"></div>
               </div>
             </div>
 
@@ -497,6 +496,8 @@
           const opsi = opsiByAnimal[animal];
           document.getElementById('kolektif-price-info').innerHTML =
             `${opsi.label} (${opsi.beratSapi}) — Biaya per orang: <strong>${formatRp(opsi.perOrang)}</strong>`;
+          document.getElementById('kolektif-spec-info').textContent =
+            `${pricing.sapiKolektif.jenisSapi} ${opsi.beratSapi}, ${pricing.sapiKolektif.orangPerEkor} orang per ekor`;
         }
         document.getElementById('section-sapi-kolektif').classList.remove('section-hidden');
       } else if (animal === 'SAPI_PERORANGAN') {
