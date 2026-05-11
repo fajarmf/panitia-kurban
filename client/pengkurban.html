@@ -238,6 +238,83 @@
       .then(() => loadData());
     loadEventOptions('form-event');
 
+    // Urutan grouping mirrors rekap WA section order
+    const GROUP_ORDER = [
+      'SAPI_KOLEKTIF_A', 'SAPI_KOLEKTIF_B', 'SAPI_KOLEKTIF_C', 'SAPI_KOLEKTIF',
+      'SAPI_PERORANGAN', 'KAMBING', 'DOMBA',
+    ];
+    const GROUP_HEADERS = {
+      SAPI_KOLEKTIF_A: '🐄 Sapi Kolektif A — 350-400 kg',
+      SAPI_KOLEKTIF_B: '🐄 Sapi Kolektif B — 320-350 kg',
+      SAPI_KOLEKTIF_C: '🐄 Sapi Kolektif C — 320-350 kg',
+      SAPI_KOLEKTIF: '🐄 Sapi Kolektif (legacy)',
+      SAPI_PERORANGAN: '🐄 Sapi Perorangan',
+      KAMBING: '🐐 Kambing',
+      DOMBA: '🐑 Domba',
+    };
+
+    function missing(value, icon) {
+      return value
+        ? `<span class="text-xs text-white/60">${escHtml(value)}</span>`
+        : `<span class="text-xs text-yellow-400/80" title="Belum diisi">${icon} belum diisi</span>`;
+    }
+
+    function renderPengkurbanRow(d) {
+      const proofs = d.paymentProofPaths || [];
+      const proofHtml = proofs.length
+        ? proofs.map((p, i) => `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(p)}')">${proofs.length > 1 ? `Bukti ${i+1}` : 'Lihat'}</button>`).join(' ')
+        : (d.purchaseType === 'BAWA_SENDIRI'
+            ? '<span class="text-white/30 text-xs" title="Bawa sendiri — bukti transfer tidak diperlukan">—</span>'
+            : '<span class="text-yellow-400/80 text-xs" title="Belum upload bukti">⚠️ belum upload</span>');
+
+      const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
+      const verifyBtn = canVerify
+        ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${escHtml(JSON.stringify(d))})'>Verifikasi</button>`
+        : '';
+
+      const infaqAmt = getInfaq(d.animalType);
+      const infaqBadge = d.infaqPaid
+        ? `<span class="badge badge-active" title="Lunas ${d.infaqPaidAt ? new Date(d.infaqPaidAt).toLocaleDateString('id-ID') : ''}">✓ Lunas</span>`
+        : `<span class="badge badge-pending">Belum</span>`;
+      const infaqBtn = `<button class="btn-secondary btn-sm" onclick="toggleInfaq('${d.id}', ${!d.infaqPaid})">${d.infaqPaid ? 'Batalkan' : 'Tandai Lunas'}</button>`;
+
+      // Phone shown under name. Yellow indicator kalau missing — biar gampang
+      // di-spot pas reconcile.
+      const phoneHtml = d.phone
+        ? `<div class="text-xs text-white/50">📱 ${escHtml(d.phone)}</div>`
+        : `<div class="text-xs text-yellow-400/80" title="No. HP belum diisi">📱 belum diisi</div>`;
+
+      return `<tr>
+        <td class="text-xs font-mono text-emerald-300/70">${escHtml(d.registrationNumber || '—')}</td>
+        <td><div class="font-semibold">${escHtml(d.name)}</div>${phoneHtml}</td>
+        <td class="text-xs text-white/70">${escHtml(d.shohibulName || '—')}</td>
+        <td>${escHtml(animalLabels[d.animalType] || d.animalType)}</td>
+        <td class="text-xs text-white/70">${computeExpectedTotal(d)}</td>
+        <td>${missing(d.address, '📍')}</td>
+        <td>${proofHtml}</td>
+        <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
+        <td><div class="flex flex-col gap-1 items-start">
+          <span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>
+          ${infaqBadge}
+        </div></td>
+        <td><div class="flex gap-2 flex-wrap">
+          ${verifyBtn}
+          ${infaqBtn}
+          <button class="btn-secondary btn-sm" onclick='editData(${escHtml(JSON.stringify(d))})'>Edit</button>
+          <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
+        </div></td>
+      </tr>`;
+    }
+
+    function renderGroupHeader(label, count) {
+      return `<tr class="bg-emerald-900/40">
+        <td colspan="10" class="font-semibold text-emerald-200 py-2 px-3">
+          ${label}
+          <span class="text-emerald-400/60 text-xs ml-2">(${count} orang)</span>
+        </td>
+      </tr>`;
+    }
+
     async function loadData() {
       const eventId = document.getElementById('event-filter').value;
       const status = document.getElementById('status-filter').value;
@@ -253,44 +330,31 @@
           return;
         }
 
-        tbody.innerHTML = data.map(d => {
-          const proofs = d.paymentProofPaths || [];
-          const proofHtml = proofs.length
-            ? proofs.map((p, i) => `<button class="btn-secondary btn-sm" onclick="showLightbox('/api/${escHtml(p)}')">${proofs.length > 1 ? `Bukti ${i+1}` : 'Lihat'}</button>`).join(' ')
-            : '<span class="text-white/30 text-xs">—</span>';
+        // Group by animal_type, sort within group by createdAt ASC
+        const groups = {};
+        data.forEach(d => {
+          const key = d.animalType || 'UNKNOWN';
+          (groups[key] ||= []).push(d);
+        });
+        Object.values(groups).forEach(rows =>
+          rows.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
+        );
 
-          const canVerify = d.status === 'PENDING_VERIFICATION' || d.status === 'PENDING_PAYMENT';
-          const verifyBtn = canVerify
-            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${escHtml(JSON.stringify(d))})'>Verifikasi</button>`
-            : '';
+        // Render in defined order, then any unknown types at the end
+        const html = [];
+        for (const key of GROUP_ORDER) {
+          const rows = groups[key];
+          if (!rows || !rows.length) continue;
+          html.push(renderGroupHeader(GROUP_HEADERS[key] || key, rows.length));
+          html.push(rows.map(renderPengkurbanRow).join(''));
+        }
+        for (const key of Object.keys(groups)) {
+          if (GROUP_ORDER.includes(key)) continue;
+          html.push(renderGroupHeader(key, groups[key].length));
+          html.push(groups[key].map(renderPengkurbanRow).join(''));
+        }
 
-          const infaqAmt = getInfaq(d.animalType);
-          const infaqBadge = d.infaqPaid
-            ? `<span class="badge badge-active" title="Lunas ${d.infaqPaidAt ? new Date(d.infaqPaidAt).toLocaleDateString('id-ID') : ''}">✓ Lunas</span>`
-            : `<span class="badge badge-pending">Belum</span>`;
-          const infaqBtn = `<button class="btn-secondary btn-sm" onclick="toggleInfaq('${d.id}', ${!d.infaqPaid})">${d.infaqPaid ? 'Batalkan' : 'Tandai Lunas'}</button>`;
-
-          return `<tr>
-            <td class="text-xs font-mono text-emerald-300/70">${escHtml(d.registrationNumber || '—')}</td>
-            <td class="font-semibold">${escHtml(d.name)}</td>
-            <td class="text-xs text-white/70">${escHtml(d.shohibulName || '—')}</td>
-            <td>${escHtml(animalLabels[d.animalType] || d.animalType)}</td>
-            <td class="text-xs text-white/70">${computeExpectedTotal(d)}</td>
-            <td class="text-xs text-white/60">${escHtml(d.address || '—')}</td>
-            <td>${proofHtml}</td>
-            <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
-            <td><div class="flex flex-col gap-1 items-start">
-              <span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>
-              ${infaqBadge}
-            </div></td>
-            <td><div class="flex gap-2 flex-wrap">
-              ${verifyBtn}
-              ${infaqBtn}
-              <button class="btn-secondary btn-sm" onclick='editData(${escHtml(JSON.stringify(d))})'>Edit</button>
-              <button class="btn-danger btn-sm" onclick="deleteData('${d.id}')">Hapus</button>
-            </div></td>
-          </tr>`;
-        }).join('');
+        tbody.innerHTML = html.join('');
       } catch (err) { showToast('Gagal memuat data', 'error'); }
     }
 
