@@ -35,7 +35,14 @@ export class VouchersController {
   ) {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.vouchersService.findAll(eventId, status, search, distributionDate, pageNum, limitNum);
+    return this.vouchersService.findAll(
+      eventId,
+      status,
+      search,
+      distributionDate,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Get('export')
@@ -64,7 +71,10 @@ export class VouchersController {
 
   @Get('batch-pdf')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
-  async downloadBatchPdf(@Query('eventId') eventId: string, @Res() res: Response) {
+  async downloadBatchPdf(
+    @Query('eventId') eventId: string,
+    @Res() res: Response,
+  ) {
     if (!eventId) {
       throw new BadRequestException('eventId is required');
     }
@@ -81,7 +91,10 @@ export class VouchersController {
 
   @Post('selected-pdf')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
-  async downloadSelectedPdf(@Body() body: { ids: string[] }, @Res() res: Response) {
+  async downloadSelectedPdf(
+    @Body() body: { ids: string[] },
+    @Res() res: Response,
+  ) {
     if (!body.ids || !body.ids.length) {
       throw new BadRequestException('ids array is required');
     }
@@ -93,7 +106,6 @@ export class VouchersController {
     });
     res.end(buffer);
   }
-
 
   @Post('bulk-delete')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
@@ -108,7 +120,9 @@ export class VouchersController {
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
   bulkUpdateDate(@Body() body: { ids: string[]; distributionDate: string }) {
     if (!body.ids || !body.ids.length || !body.distributionDate) {
-      throw new BadRequestException('ids array and distributionDate are required');
+      throw new BadRequestException(
+        'ids array and distributionDate are required',
+      );
     }
     return this.vouchersService.bulkUpdateDate(body.ids, body.distributionDate);
   }
@@ -122,11 +136,17 @@ export class VouchersController {
 
   @Patch(':id/date')
   @Roles(Role.SUPER_ADMIN, Role.KETUA_PANITIA, Role.PANITIA_VOUCHER)
-  updateDate(@Param('id') id: string, @Body() body: { distributionDate: string }) {
+  updateDate(
+    @Param('id') id: string,
+    @Body() body: { distributionDate: string },
+  ) {
     if (!body.distributionDate) {
       throw new BadRequestException('distributionDate is required');
     }
-    return this.vouchersService.updateDistributionDate(id, body.distributionDate);
+    return this.vouchersService.updateDistributionDate(
+      id,
+      body.distributionDate,
+    );
   }
 
   @Post()
@@ -135,7 +155,11 @@ export class VouchersController {
     @Body() body: { eventId: string; distributionDate: string },
     @Request() req: any,
   ) {
-    return this.vouchersService.create(body.eventId, body.distributionDate, req.user.id);
+    return this.vouchersService.create(
+      body.eventId,
+      body.distributionDate,
+      req.user.id,
+    );
   }
 
   @Post('batch')
@@ -144,7 +168,12 @@ export class VouchersController {
     @Body() body: { eventId: string; count: number; distributionDate: string },
     @Request() req: any,
   ) {
-    return this.vouchersService.createBatch(body.eventId, body.count, body.distributionDate, req.user.id);
+    return this.vouchersService.createBatch(
+      body.eventId,
+      body.count,
+      body.distributionDate,
+      req.user.id,
+    );
   }
 
   @Post('scan')

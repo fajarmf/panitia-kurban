@@ -53,7 +53,9 @@ export class DashboardService {
       .andWhere('v.status = :status', { status: VoucherStatus.CANCELLED })
       .getCount();
 
-    const totalUsers = await this.usersRepo.count({ where: { isActive: true } });
+    const totalUsers = await this.usersRepo.count({
+      where: { isActive: true },
+    });
 
     let totalPengkurban = 0;
     if (eventId) {
@@ -88,7 +90,10 @@ export class DashboardService {
       totalUsers,
       totalPengkurban,
       totalEvents,
-      claimPercentage: totalVouchers > 0 ? Math.round((claimedVouchers / totalVouchers) * 100) : 0,
+      claimPercentage:
+        totalVouchers > 0
+          ? Math.round((claimedVouchers / totalVouchers) * 100)
+          : 0,
       recentScans: recentScans.map((s) => ({
         voucherCode: s.voucherCode,
         claimedAt: s.claimedAt,
