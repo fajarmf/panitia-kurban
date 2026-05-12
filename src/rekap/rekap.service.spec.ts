@@ -22,23 +22,27 @@ describe('RekapService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  const makePk = (overrides: Partial<Pengkurban> = {}): Pengkurban => ({
-    id: overrides.id ?? 'id-1',
-    name: overrides.name ?? 'Nama',
-    shohibulName: overrides.shohibulName ?? null,
-    animalType: overrides.animalType ?? ('SAPI_KOLEKTIF_A' as any),
-    animalSize: overrides.animalSize ?? null,
-    status: overrides.status ?? ('CONFIRMED' as any),
-    infaqPaid: overrides.infaqPaid ?? false,
-    infaqPaidAt: overrides.infaqPaidAt ?? null,
-  } as Pengkurban);
+  const makePk = (overrides: Partial<Pengkurban> = {}): Pengkurban =>
+    ({
+      id: overrides.id ?? 'id-1',
+      name: overrides.name ?? 'Nama',
+      shohibulName: overrides.shohibulName ?? null,
+      address: overrides.address ?? null,
+      animalType: overrides.animalType ?? ('SAPI_KOLEKTIF_A' as any),
+      animalSize: overrides.animalSize ?? null,
+      purchaseType: overrides.purchaseType ?? ('BELI_MASJID' as any),
+      status: overrides.status ?? ('CONFIRMED' as any),
+      infaqPaid: overrides.infaqPaid ?? false,
+      infaqPaidAt: overrides.infaqPaidAt ?? null,
+    }) as Pengkurban;
 
-  const makeDonation = (overrides: Partial<Donation> = {}): Donation => ({
-    id: overrides.id ?? 'd-1',
-    name: overrides.name ?? 'Donor',
-    amount: overrides.amount ?? 100000,
-    status: overrides.status ?? ('CONFIRMED' as any),
-  } as Donation);
+  const makeDonation = (overrides: Partial<Donation> = {}): Donation =>
+    ({
+      id: overrides.id ?? 'd-1',
+      name: overrides.name ?? 'Donor',
+      amount: overrides.amount ?? 100000,
+      status: overrides.status ?? ('CONFIRMED' as any),
+    }) as Donation;
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -47,11 +51,31 @@ describe('RekapService', () => {
   describe('getDonasiRekap — sohibul section', () => {
     it('shows all non-rejected pengkurban with ✅ only when infaqPaid=true', async () => {
       pengkurbanRepo.find.mockResolvedValue([
-        makePk({ name: 'Confirmed Lunas', status: 'CONFIRMED' as any, infaqPaid: true }),
-        makePk({ name: 'Confirmed Belum', status: 'CONFIRMED' as any, infaqPaid: false }),
-        makePk({ name: 'Pending Lunas', status: 'PENDING_PAYMENT' as any, infaqPaid: true }),
-        makePk({ name: 'Pending Belum', status: 'PENDING_PAYMENT' as any, infaqPaid: false }),
-        makePk({ name: 'Rejected', status: 'REJECTED' as any, infaqPaid: false }),
+        makePk({
+          name: 'Confirmed Lunas',
+          status: 'CONFIRMED' as any,
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'Confirmed Belum',
+          status: 'CONFIRMED' as any,
+          infaqPaid: false,
+        }),
+        makePk({
+          name: 'Pending Lunas',
+          status: 'PENDING_PAYMENT' as any,
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'Pending Belum',
+          status: 'PENDING_PAYMENT' as any,
+          infaqPaid: false,
+        }),
+        makePk({
+          name: 'Rejected',
+          status: 'REJECTED' as any,
+          infaqPaid: false,
+        }),
       ]);
       donationRepo.find.mockResolvedValue([]);
 
@@ -70,9 +94,21 @@ describe('RekapService', () => {
     it('shows ✅ only for CONFIRMED donations', async () => {
       pengkurbanRepo.find.mockResolvedValue([]);
       donationRepo.find.mockResolvedValue([
-        makeDonation({ name: 'Donor A', amount: 500000, status: 'CONFIRMED' as any }),
-        makeDonation({ name: 'Donor B', amount: 300000, status: 'PENDING_VERIFICATION' as any }),
-        makeDonation({ name: 'Donor C', amount: 100000, status: 'REJECTED' as any }),
+        makeDonation({
+          name: 'Donor A',
+          amount: 500000,
+          status: 'CONFIRMED' as any,
+        }),
+        makeDonation({
+          name: 'Donor B',
+          amount: 300000,
+          status: 'PENDING_VERIFICATION' as any,
+        }),
+        makeDonation({
+          name: 'Donor C',
+          amount: 100000,
+          status: 'REJECTED' as any,
+        }),
       ]);
 
       const text = await service.getDonasiRekap();
@@ -91,8 +127,12 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
-      expect(text).toContain('Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11');
-      expect(text).toContain('Donasi online: https://kurban.masjidalhijrahcge.id/donate.html');
+      expect(text).toContain(
+        'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11',
+      );
+      expect(text).toContain(
+        'Donasi online: https://kurban.masjidalhijrahcge.id/donate.html',
+      );
       expect(text).toContain('Fajar Firdaus (0812-7149-927)');
       expect(text).toContain('Panitia Kurban (0851-2151-9870)');
     });
@@ -101,9 +141,24 @@ describe('RekapService', () => {
   describe('getPengkurbanRekap — ✅ logic', () => {
     it('✅ based on infaqPaid, not status', async () => {
       pengkurbanRepo.find.mockResolvedValue([
-        makePk({ name: 'Confirmed Lunas', animalType: 'SAPI_KOLEKTIF_A' as any, status: 'CONFIRMED' as any, infaqPaid: true }),
-        makePk({ name: 'Confirmed Belum', animalType: 'SAPI_KOLEKTIF_A' as any, status: 'CONFIRMED' as any, infaqPaid: false }),
-        makePk({ name: 'Pending Lunas', animalType: 'SAPI_KOLEKTIF_A' as any, status: 'PENDING_PAYMENT' as any, infaqPaid: true }),
+        makePk({
+          name: 'Confirmed Lunas',
+          animalType: 'SAPI_KOLEKTIF_A' as any,
+          status: 'CONFIRMED' as any,
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'Confirmed Belum',
+          animalType: 'SAPI_KOLEKTIF_A' as any,
+          status: 'CONFIRMED' as any,
+          infaqPaid: false,
+        }),
+        makePk({
+          name: 'Pending Lunas',
+          animalType: 'SAPI_KOLEKTIF_A' as any,
+          status: 'PENDING_PAYMENT' as any,
+          infaqPaid: true,
+        }),
       ]);
 
       const text = await service.getPengkurbanRekap();
@@ -151,9 +206,24 @@ describe('RekapService', () => {
   describe('getPengkurbanRekap — kambing/domba tier', () => {
     it('shows tier from animalSize per row', async () => {
       pengkurbanRepo.find.mockResolvedValue([
-        makePk({ name: 'Hadi', animalType: 'DOMBA' as any, animalSize: 'Tipe A', infaqPaid: false }),
-        makePk({ name: 'Siti', animalType: 'KAMBING' as any, animalSize: 'Tipe B', infaqPaid: true }),
-        makePk({ name: 'Budi', animalType: 'KAMBING' as any, animalSize: null, infaqPaid: false }),
+        makePk({
+          name: 'Hadi',
+          animalType: 'DOMBA' as any,
+          animalSize: 'Tipe A',
+          infaqPaid: false,
+        }),
+        makePk({
+          name: 'Siti',
+          animalType: 'KAMBING' as any,
+          animalSize: 'Tipe B',
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'Budi',
+          animalType: 'KAMBING' as any,
+          animalSize: null,
+          infaqPaid: false,
+        }),
       ]);
 
       const text = await service.getPengkurbanRekap();
@@ -212,6 +282,74 @@ describe('RekapService', () => {
       const text = await service.getPengkurbanRekap();
 
       expect(text).not.toContain('Informasi Pemesanan');
+    });
+  });
+
+  describe('getPengkurbanRekap — address rendering', () => {
+    it('appends short blok between name and ✅ for kolektif, perorangan, kambing/domba', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'Yulham',
+          animalType: 'SAPI_KOLEKTIF_B' as any,
+          address: 'Nahara Timur - 3/50',
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'Fajar',
+          animalType: 'SAPI_PERORANGAN' as any,
+          address: 'Margata - Jl Margata 7 no 38 Cimanggis',
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'Hadi',
+          animalType: 'DOMBA' as any,
+          animalSize: 'Tipe A',
+          address: 'Margata - M6/63',
+          infaqPaid: true,
+        }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('1. Yulham NHT 3/50 ✅');
+      expect(text).toContain('1. Fajar M7/38 ✅');
+      expect(text).toContain('1. Hadi (Domba - Tipe A) M6/63 ✅');
+    });
+
+    it('omits address segment when address is null/empty', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'NoAddr',
+          animalType: 'SAPI_KOLEKTIF_A' as any,
+          address: null,
+          infaqPaid: true,
+        }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('1. NoAddr ✅');
+      expect(text).not.toMatch(/NoAddr\s+\S+\s+✅/);
+    });
+
+    it.each([
+      ['Margata - Margata - M3/36', 'M3/36'], // duplicate prefix
+      ['M3/1', 'M3/1'], // bare blok
+      ['MGT 3', 'MGT 3'], // bare MGT (no slash)
+      ['Nahara - NHT 6/5', 'NHT 6/5'], // does NOT become "NHT NHT 6/5"
+      ['Uenos 5 / 57', 'U5/57'], // spaces around slash
+    ])('renders %j as "Pengguna %s"', async (addr, expected) => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'Pengguna',
+          animalType: 'SAPI_KOLEKTIF_A' as any,
+          address: addr,
+          infaqPaid: false,
+        }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+      expect(text).toContain(`1. Pengguna ${expected}`);
     });
   });
 });
