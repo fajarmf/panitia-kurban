@@ -52,8 +52,19 @@ if [[ $DO_DIST -eq 0 && $DO_CLIENT -eq 0 && $DO_RESTART -eq 0 ]]; then
   DO_DIST=1; DO_CLIENT=1; DO_RESTART=1
 fi
 
-: "${CPANEL_HOST:?Set CPANEL_HOST=<host> (cPanel SSH host)}"
-: "${CPANEL_USER:?Set CPANEL_USER=<user> (cPanel username)}"
+# Auto-source .env if present (looks in repo root) — keeps cPanel creds out
+# of shell rc / git, lives next to existing DB/JWT vars.
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+REPO_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+if [[ -f "$REPO_ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/.env"
+  set +a
+fi
+
+: "${CPANEL_HOST:?Set CPANEL_HOST=<host> in .env or shell (cPanel SSH host)}"
+: "${CPANEL_USER:?Set CPANEL_USER=<user> in .env or shell (cPanel username)}"
 REMOTE_PATH="${REMOTE_PATH:-public_html/kurban.masjidalhijrahcge.id}"
 
 SSH_ARGS=(-o LogLevel=ERROR "${CPANEL_USER}@${CPANEL_HOST}")

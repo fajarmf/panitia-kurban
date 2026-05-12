@@ -353,6 +353,64 @@ describe('RekapService', () => {
     });
   });
 
+  describe('getPengkurbanRekap — open invite slot', () => {
+    it('adds "N+1. ..." after last sapi perorangan when list non-empty', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'A', animalType: 'SAPI_PERORANGAN' as any }),
+        makePk({ name: 'B', animalType: 'SAPI_PERORANGAN' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('1. A');
+      expect(text).toContain('2. B');
+      expect(text).toContain('3. ...');
+      // Exactly one invite slot, not two
+      expect(text).not.toContain('4. ...');
+    });
+
+    it('adds "N+1. ..." after last kambing/domba when list non-empty', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'A', animalType: 'KAMBING' as any }),
+        makePk({ name: 'B', animalType: 'DOMBA' as any }),
+        makePk({ name: 'C', animalType: 'KAMBING' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('1. A (Kambing)');
+      expect(text).toContain('2. B (Domba)');
+      expect(text).toContain('3. C (Kambing)');
+      expect(text).toContain('4. ...');
+    });
+
+    it('does NOT add open slot to kolektif sections (slot count fixed at 7)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'A', animalType: 'SAPI_KOLEKTIF_A' as any }),
+        makePk({ name: 'B', animalType: 'SAPI_KOLEKTIF_A' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+      // Sapi A header → 1. A, 2. B, 3-7. ... (5 placeholders, no 8th line)
+      expect(text).toContain('7. ...');
+      expect(text).not.toContain('8. ...');
+    });
+
+    it('preserves existing empty-list placeholders (1-3) when list empty', async () => {
+      pengkurbanRepo.find.mockResolvedValue([]);
+
+      const text = await service.getPengkurbanRekap();
+      // Empty pengkurban → empty perorangan + kambing/domba → both show 1./2./3. ...
+      expect(text).toContain('Qurban Sapi perorangan');
+      expect(text).toContain('Qurban Kambing dan Domba');
+      expect(text).toContain('1. ...');
+      expect(text).toContain('2. ...');
+      expect(text).toContain('3. ...');
+      // No invite-slot N+1 in empty case (else branch handles it)
+      expect(text).not.toContain('4. ...');
+    });
+  });
+
   describe('REKAP_REKENING env var', () => {
     const ORIGINAL_ENV = process.env.REKAP_REKENING;
     afterEach(() => {

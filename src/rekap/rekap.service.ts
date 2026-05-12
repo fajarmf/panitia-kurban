@@ -149,6 +149,8 @@ export class RekapService {
       sapiPerorangan.forEach((d, i) =>
         lines.push(`${i + 1}. ${displayName(d)}${blok(d)}${check(d)}`),
       );
+      // Open slot di akhir — invite jamaah yang mau ikut nimbrung
+      lines.push(`${sapiPerorangan.length + 1}. ...`);
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
     }
@@ -174,6 +176,8 @@ export class RekapService {
           `${i + 1}. ${displayName(d)} (${jenis}${suffix})${blok(d)}${check(d)}`,
         );
       });
+      // Open slot di akhir — invite jamaah yang mau ikut nimbrung
+      lines.push(`${kambingDomba.length + 1}. ...`);
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
     }
