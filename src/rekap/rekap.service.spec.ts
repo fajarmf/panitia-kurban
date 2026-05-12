@@ -34,6 +34,7 @@ describe('RekapService', () => {
       status: overrides.status ?? ('CONFIRMED' as any),
       infaqPaid: overrides.infaqPaid ?? false,
       infaqPaidAt: overrides.infaqPaidAt ?? null,
+      notes: overrides.notes ?? null,
     }) as Pengkurban;
 
   const makeDonation = (overrides: Partial<Donation> = {}): Donation =>
@@ -117,6 +118,72 @@ describe('RekapService', () => {
       expect(text).toContain('2. Donor B 300 ribu');
       expect(text).not.toContain('Donor B 300 ribu ✅');
       expect(text).not.toContain('Donor C');
+    });
+  });
+
+  describe('getDonasiRekap — infaq waiver via notes', () => {
+    it('skips pengkurban with notes containing "infaq:potongan" from sohibul section', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Cash Donor', animalType: 'SAPI_PERORANGAN' as any, infaqPaid: true }),
+        makePk({
+          name: 'Potongan Donor',
+          animalType: 'SAPI_PERORANGAN' as any,
+          purchaseType: 'BAWA_SENDIRI' as any,
+          notes: 'Infaq via potongan daging. Marker: infaq:potongan',
+          infaqPaid: true,
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. Cash Donor 1750 ribu ✅');
+      expect(text).not.toContain('Potongan Donor');
+    });
+
+    it('skips pengkurban with notes containing "infaq:waived" (institutional sumbangan)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'BPKH',
+          animalType: 'KAMBING' as any,
+          notes: 'Sumbangan institusional. Marker: infaq:waived',
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).not.toContain('BPKH');
+    });
+
+    it('still includes pengkurban with non-marker notes', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'Regular',
+          animalType: 'KAMBING' as any,
+          notes: 'Just some random verification note about transfer details',
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. Regular 300 ribu');
+    });
+
+    it('does NOT filter notes that mention "infaq" and "tidak" without colon-marker (false-positive boundary)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'Cash Donor',
+          animalType: 'KAMBING' as any,
+          notes: 'Infaq sudah transfer. Bukti tidak terlampir, manual konfirmasi.',
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. Cash Donor 300 ribu');
     });
   });
 
