@@ -9,6 +9,16 @@ function displayName(p: Pengkurban): string {
   return (p.shohibulName || p.name).split('\n')[0].trim();
 }
 
+// Returns true if pengkurban row has waiver marker in `notes` — infaq via
+// potongan daging atau institutional sumbangan (e.g., BPKH), bukan cash.
+// Marker convention: notes contains literal `infaq:potongan` or `infaq:waived`.
+// Colon separator is required to avoid false-positive matches on free-form
+// notes that happen to mention "infaq" near common Indonesian words.
+function hasInfaqWaiver(p: Pengkurban): boolean {
+  if (!p || !p.notes) return false;
+  return /infaq\s*:\s*(potongan|waived)/i.test(p.notes);
+}
+
 const REKENING_DEFAULT =
   'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11';
 
@@ -213,9 +223,12 @@ export class RekapService {
 
     const lines: string[] = [`*List Sumbangan Kegiatan Idul Qurban*`, ``];
 
-    // Sohibul Qurban — semua active (non-REJECTED), ✅ kalau infaq_paid
+    // Sohibul Qurban — semua active (non-REJECTED), ✅ kalau infaq_paid.
+    // Skip pengkurban yang infaq-nya via potongan daging / institutional
+    // sumbangan — mereka ga kontribusi cash infaq, jadi out-of-scope buat
+    // rekap donasi.
     const pkActive = pengkurban.filter(
-      (d) => d.status !== ('REJECTED' as never),
+      (d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d),
     );
     lines.push(`• Sohibul Qurban`);
     if (pkActive.length) {
