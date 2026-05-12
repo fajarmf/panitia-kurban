@@ -9,6 +9,35 @@ function displayName(p: Pengkurban): string {
   return (p.shohibulName || p.name).split('\n')[0].trim();
 }
 
+// Display-oriented blok extractor for rekap pengkurban. Returns uppercase,
+// space-separated tokens matching the format panitia broadcasts use
+// (e.g. "NHT 3/50", "M6/102", "MGT 2/22"). Empty string if no address.
+function formatBlokShort(addr: string | null | undefined): string {
+  if (!addr) return '';
+  let s = String(addr).split('\n')[0].trim();
+  if (!s) return '';
+  s = s.replace(/^(Margata\s*-\s*)+/i, '');
+  let m = s.match(/^Nahara(?:\s+Timur)?\s*-\s*(.+)$/i);
+  if (m) {
+    const rest = m[1].trim();
+    const nht = rest.match(/^NHT\s*(.+)$/i);
+    return nht ? `NHT ${nht[1].trim()}` : `NHT ${rest}`;
+  }
+  m = s.match(/Margata\s+(\d+)\s+no\.?\s*(\d+)/i);
+  if (m) return `M${m[1]}/${m[2]}`;
+  m = s.match(/^Uenos\s*(\d+)\s*[/\\]\s*(\d+)/i);
+  if (m) return `U${m[1]}/${m[2]}`;
+  m = s.match(/^MGT\b\s*(.+)$/i);
+  if (m) return `MGT ${m[1].trim()}`;
+  m = s.match(/^M\s*(\d+)\s*[/\\]\s*(\d+)/i);
+  if (m) return `M${m[1]}/${m[2]}`;
+  m = s.match(/^M\s*(\d+)\b/i);
+  if (m) return `M${m[1]}`;
+  m = s.match(/^NHT\s*(.+)$/i);
+  if (m) return `NHT ${m[1].trim()}`;
+  return s;
+}
+
 function formatRibu(amount: number | null | undefined): string {
   if (amount == null || amount === 0) return '';
   if (amount >= 1_000_000 && amount % 1_000_000 === 0)
@@ -69,8 +98,11 @@ export class RekapService {
         d.animalType === ('DOMBA' as never),
     );
 
-    const check = (d: Pengkurban) =>
-      d.infaqPaid ? ' ✅' : '';
+    const check = (d: Pengkurban) => (d.infaqPaid ? ' ✅' : '');
+    const blok = (d: Pengkurban) => {
+      const b = formatBlokShort(d.address);
+      return b ? ` ${b}` : '';
+    };
 
     const lines: string[] = [
       `*Daftar Pengkurban*`,
@@ -83,7 +115,7 @@ export class RekapService {
       lines.push(header);
       for (let i = 0; i < 7; i++) {
         const d = rows[i];
-        if (d) lines.push(`${i + 1}. ${displayName(d)}${check(d)}`);
+        if (d) lines.push(`${i + 1}. ${displayName(d)}${blok(d)}${check(d)}`);
         else lines.push(`${i + 1}. ...`);
       }
       lines.push(``);
@@ -100,7 +132,7 @@ export class RekapService {
     lines.push(`Qurban Sapi perorangan`);
     if (sapiPerorangan.length) {
       sapiPerorangan.forEach((d, i) =>
-        lines.push(`${i + 1}. ${displayName(d)}${check(d)}`),
+        lines.push(`${i + 1}. ${displayName(d)}${blok(d)}${check(d)}`),
       );
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
@@ -123,7 +155,9 @@ export class RekapService {
           : sizeStr
             ? ` - ${sizeStr}`
             : '';
-        lines.push(`${i + 1}. ${displayName(d)} (${jenis}${suffix})${check(d)}`);
+        lines.push(
+          `${i + 1}. ${displayName(d)} (${jenis}${suffix})${blok(d)}${check(d)}`,
+        );
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
@@ -190,7 +224,9 @@ export class RekapService {
       `Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11`,
     );
     lines.push(``);
-    lines.push(`Donasi online: https://kurban.masjidalhijrahcge.id/donate.html`);
+    lines.push(
+      `Donasi online: https://kurban.masjidalhijrahcge.id/donate.html`,
+    );
     lines.push(``);
     lines.push(`Konfirmasi`);
     lines.push(
