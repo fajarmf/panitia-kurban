@@ -14,8 +14,17 @@
 
 set -euo pipefail
 
-: "${CPANEL_HOST:?Set CPANEL_HOST=<host>}"
-: "${CPANEL_USER:?Set CPANEL_USER=<user>}"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+REPO_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+if [[ -f "$REPO_ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/.env"
+  set +a
+fi
+
+: "${CPANEL_HOST:?Set CPANEL_HOST=<host> in .env or shell}"
+: "${CPANEL_USER:?Set CPANEL_USER=<user> in .env or shell}"
 REMOTE_PATH="${REMOTE_PATH:-public_html/kurban.masjidalhijrahcge.id}"
 
 ssh -o LogLevel=ERROR "${CPANEL_USER}@${CPANEL_HOST}" \
