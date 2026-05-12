@@ -9,6 +9,15 @@ function displayName(p: Pengkurban): string {
   return (p.shohibulName || p.name).split('\n')[0].trim();
 }
 
+const REKENING_DEFAULT =
+  'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11';
+
+// Rekening line yang ditampilkan di akhir rekap. Override pakai env
+// REKAP_REKENING (kalau bank/rekening berubah tahun depan, ga perlu code change).
+function getRekening(): string {
+  return process.env.REKAP_REKENING?.trim() || REKENING_DEFAULT;
+}
+
 // Display-oriented blok extractor for rekap pengkurban. Returns uppercase,
 // space-separated tokens matching the format panitia broadcasts use
 // (e.g. "NHT 3/50", "M6/102", "MGT 2/22"). Empty string if no address.
@@ -124,8 +133,14 @@ export class RekapService {
     if (sapiA.length || sapiB.length || sapiC.length || sapiLegacy.length) {
       lines.push(`Qurban Sapi Kolektif`);
       renderKolektif(sapiA, `• Sapi A 350 - 400 Kg Rp 4.000.000 / orang`);
-      renderKolektif(sapiB, `• Sapi B 320 - 350 Kg Rp 3.500.000 / orang`);
-      renderKolektif(sapiC, `• Sapi C 320 - 350 Kg Rp 3.500.000 / orang`);
+      renderKolektif(
+        sapiB,
+        `• Sapi B 320 - 350 Kg Rp 3.500.000 / orang (sudah termasuk infaq)`,
+      );
+      renderKolektif(
+        sapiC,
+        `• Sapi C 320 - 350 Kg Rp 3.500.000 / orang (sudah termasuk infaq)`,
+      );
       if (sapiLegacy.length) renderKolektif(sapiLegacy, `• Sapi Kolektif`);
     }
 
@@ -169,6 +184,10 @@ export class RekapService {
       lines.push(infoPemesanan);
       lines.push(``);
     }
+
+    lines.push(`Pembayaran:`);
+    lines.push(getRekening());
+    lines.push(``);
 
     lines.push(`Jazakumullahu Khairan.`);
     lines.push(``);
@@ -220,9 +239,7 @@ export class RekapService {
     }
     lines.push(``);
 
-    lines.push(
-      `Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11`,
-    );
+    lines.push(getRekening());
     lines.push(``);
     lines.push(
       `Donasi online: https://kurban.masjidalhijrahcge.id/donate.html`,

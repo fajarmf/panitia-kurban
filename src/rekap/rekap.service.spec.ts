@@ -352,4 +352,68 @@ describe('RekapService', () => {
       expect(text).toContain(`1. Pengguna ${expected}`);
     });
   });
+
+  describe('REKAP_REKENING env var', () => {
+    const ORIGINAL_ENV = process.env.REKAP_REKENING;
+    afterEach(() => {
+      if (ORIGINAL_ENV === undefined) {
+        delete process.env.REKAP_REKENING;
+      } else {
+        process.env.REKAP_REKENING = ORIGINAL_ENV;
+      }
+    });
+
+    it('getPengkurbanRekap includes Pembayaran section with default rekening when env unset', async () => {
+      delete process.env.REKAP_REKENING;
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Test', animalType: 'KAMBING' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('Pembayaran:');
+      expect(text).toContain(
+        'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11',
+      );
+      expect(text.indexOf('Pembayaran:')).toBeLessThan(
+        text.indexOf('Jazakumullahu Khairan.'),
+      );
+    });
+
+    it('getPengkurbanRekap Pembayaran reflects REKAP_REKENING when env set', async () => {
+      process.env.REKAP_REKENING = 'Rekening BCA | 12345 a/n Test Override';
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({ name: 'Test', animalType: 'KAMBING' as any }),
+      ]);
+
+      const text = await service.getPengkurbanRekap();
+
+      expect(text).toContain('Pembayaran:');
+      expect(text).toContain('Rekening BCA | 12345 a/n Test Override');
+      expect(text).not.toContain('Bank Muamalat');
+    });
+
+    it('getDonasiRekap rekening line reflects REKAP_REKENING when env set', async () => {
+      process.env.REKAP_REKENING = 'Rekening BCA | 12345 a/n Test Override';
+      pengkurbanRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('Rekening BCA | 12345 a/n Test Override');
+      expect(text).not.toContain('Bank Muamalat');
+    });
+
+    it('getDonasiRekap rekening falls back to default when env unset', async () => {
+      delete process.env.REKAP_REKENING;
+      pengkurbanRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain(
+        'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11',
+      );
+    });
+  });
 });

@@ -189,10 +189,10 @@
         return `Rp ${fmt(PRICING.sapiKolektif.opsiA.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiA.perOrang)}+${fmt(infaq)})</span>`;
       }
       if (at === 'SAPI_KOLEKTIF_B') {
-        return `Rp ${fmt(PRICING.sapiKolektif.opsiB.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiB.perOrang)}+${fmt(infaq)})</span>`;
+        return `Rp ${fmt(PRICING.sapiKolektif.opsiB.perOrang)} <span class="text-white/50 text-xs">(sudah termasuk infaq ${fmt(infaq)})</span>`;
       }
       if (at === 'SAPI_KOLEKTIF_C') {
-        return `Rp ${fmt(PRICING.sapiKolektif.opsiC.perOrang + infaq)} <span class="text-white/50 text-xs">(${fmt(PRICING.sapiKolektif.opsiC.perOrang)}+${fmt(infaq)})</span>`;
+        return `Rp ${fmt(PRICING.sapiKolektif.opsiC.perOrang)} <span class="text-white/50 text-xs">(sudah termasuk infaq ${fmt(infaq)})</span>`;
       }
       if (at === 'SAPI_PERORANGAN') {
         if (row.price == null) return '<span class="text-yellow-400">(harga belum diisi)</span>';
