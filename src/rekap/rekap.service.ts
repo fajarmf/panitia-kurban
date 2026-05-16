@@ -31,7 +31,8 @@ function getRekening(): string {
 
 // Display-oriented blok extractor for rekap pengkurban. Returns uppercase,
 // space-separated tokens matching the format panitia broadcasts use
-// (e.g. "NHT 3/50", "M6/102", "MGT 2/22"). Empty string if no address.
+// (e.g. "NHT 3/50", "M6/102"). MGT cluster di-normalize ke M (per konvensi
+// broadcast). Empty string if no address.
 function formatBlokShort(addr: string | null | undefined): string {
   if (!addr) return '';
   let s = String(addr).split('\n')[0].trim();
@@ -45,10 +46,15 @@ function formatBlokShort(addr: string | null | undefined): string {
   }
   m = s.match(/Margata\s+(\d+)\s+no\.?\s*(\d+)/i);
   if (m) return `M${m[1]}/${m[2]}`;
+  m = s.match(/^Margata\s*(\d+)\s*[/\\]\s*(\d+)/i);
+  if (m) return `M${m[1]}/${m[2]}`;
   m = s.match(/^Uenos\s*(\d+)\s*[/\\]\s*(\d+)/i);
   if (m) return `U${m[1]}/${m[2]}`;
-  m = s.match(/^MGT\b\s*(.+)$/i);
-  if (m) return `MGT ${m[1].trim()}`;
+  // MGT → M: "MGT 6/28" → "M6/28", "MGT 3" → "M3"
+  m = s.match(/^MGT\s*(\d+)\s*[/\\]\s*(\d+)/i);
+  if (m) return `M${m[1]}/${m[2]}`;
+  m = s.match(/^MGT\s*(\d+)\b/i);
+  if (m) return `M${m[1]}`;
   m = s.match(/^M\s*(\d+)\s*[/\\]\s*(\d+)/i);
   if (m) return `M${m[1]}/${m[2]}`;
   m = s.match(/^M\s*(\d+)\b/i);
@@ -56,6 +62,21 @@ function formatBlokShort(addr: string | null | undefined): string {
   m = s.match(/^NHT\s*(.+)$/i);
   if (m) return `NHT ${m[1].trim()}`;
   return s;
+}
+
+// Normalize name untuk merge key — extract first significant token
+// (skip honorifics & single-letter abbreviations like "H").
+function nameKey(name: string | null | undefined): string {
+  if (!name) return '';
+  const HONORIFICS =
+    /^(h|hj|bu|pak|mas|mba|mbak|ibu|bapak|bpk|bin|binti|alm|almarhum|almarhumah|al|tn|ny)$/i;
+  const tokens = String(name)
+    .split('\n')[0]
+    .toLowerCase()
+    .replace(/[.,()]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !HONORIFICS.test(t));
+  return tokens[0] || '';
 }
 
 function formatRibu(amount: number | null | undefined): string {
@@ -234,22 +255,30 @@ export class RekapService {
       createdAt: Date;
     };
 
-    const entries: Entry[] = [];
+    type Raw = {
+      displayLabel: string; // nama mentah, buat fallback display kalau blok kosong
+      blok: string;
+      amount: number;
+      checked: boolean;
+      createdAt: Date;
+      key: string; // merge key: blok + first-name-token
+    };
 
-    // Privacy: nama di-hide untuk semua entry — output cuma blok address.
-    // Fallback ke nama kalau blok kosong, biar baris ga jadi anonim total.
+    const raws: Raw[] = [];
+
     pengkurban
       .filter((d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d))
       .forEach((d) => {
+        const dn = displayName(d);
         const blok = formatBlokShort(d.address);
-        const name = blok ? '' : displayName(d);
-        entries.push({
-          name,
+        raws.push({
+          displayLabel: dn,
           blok,
           amount: getInfaqAmount(d.animalType as string),
           checked:
             d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true,
           createdAt: d.createdAt,
+          key: blok ? `${blok}::${nameKey(dn)}` : `noblok::${dn}`,
         });
       });
 
@@ -257,15 +286,44 @@ export class RekapService {
       .filter((d) => d.status !== ('REJECTED' as never))
       .forEach((d) => {
         const blok = formatBlokShort(d.address);
-        const name = blok ? '' : d.name;
-        entries.push({
-          name,
+        raws.push({
+          displayLabel: d.name,
           blok,
           amount: d.amount == null ? 0 : Number(d.amount),
           checked: true,
           createdAt: d.createdAt,
+          key: blok ? `${blok}::${nameKey(d.name)}` : `noblok::${d.name}`,
         });
       });
+
+    // Merge raws dengan key sama — sum amounts, OR-merge checked, earliest createdAt.
+    // Privacy: display pakai blok kalau ada, fallback ke nama.
+    const grouped = new Map<string, Entry>();
+    raws.forEach((r) => {
+      const existing = grouped.get(r.key);
+      if (existing) {
+        existing.amount += r.amount;
+        existing.checked = existing.checked || r.checked;
+        if (
+          r.createdAt &&
+          (!existing.createdAt ||
+            new Date(r.createdAt).getTime() <
+              new Date(existing.createdAt).getTime())
+        ) {
+          existing.createdAt = r.createdAt;
+        }
+      } else {
+        grouped.set(r.key, {
+          name: r.blok ? '' : r.displayLabel,
+          blok: r.blok,
+          amount: r.amount,
+          checked: r.checked,
+          createdAt: r.createdAt,
+        });
+      }
+    });
+
+    const entries: Entry[] = [...grouped.values()];
 
     entries.sort((a, b) => {
       const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
