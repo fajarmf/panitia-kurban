@@ -394,10 +394,10 @@ describe('RekapService', () => {
       expect(text).not.toContain('BPKH');
     });
 
-    it('BAWA_SENDIRI: ✅ strict — hanya kalau infaq_paid=true, tetap muncul kalau false', async () => {
+    it('BAWA_SENDIRI ✅ rule: infaq_paid=true OR PENDING_VERIFICATION', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
-          name: 'FixtureBawaUnpaid',
+          name: 'FixtureBawaUnpaidConfirmed',
           animalType: 'SAPI_PERORANGAN' as any,
           purchaseType: 'BAWA_SENDIRI' as any,
           infaqPaid: false,
@@ -413,16 +413,27 @@ describe('RekapService', () => {
           address: 'Margata - M99/41',
           createdAt: new Date('2030-01-01'),
         }),
+        makePk({
+          name: 'FixtureBawaPendingVerif',
+          animalType: 'DOMBA' as any,
+          purchaseType: 'BAWA_SENDIRI' as any,
+          infaqPaid: false,
+          status: 'PENDING_VERIFICATION' as any,
+          address: 'Margata - M99/42',
+          createdAt: new Date('2030-01-02'),
+        }),
       ]);
       donationRepo.find.mockResolvedValue([]);
 
       const text = await service.getDonasiRekap();
 
-      // Unpaid BAWA_SENDIRI: muncul tanpa ✅ (CONFIRMED status ga override strict rule)
+      // CONFIRMED + infaq_paid=false: muncul tanpa ✅ (admin konfirm reg, infaq belum cash)
       expect(text).toContain('1. M99/40 1.75 juta');
       expect(text).not.toContain('1. M99/40 1.75 juta ✅');
-      // Paid BAWA_SENDIRI: ✅
+      // infaq_paid=true: ✅
       expect(text).toContain('2. M99/41 1.75 juta ✅');
+      // PENDING_VERIFICATION: ✅ (bukti udah diupload, finance pending)
+      expect(text).toContain('3. M99/42 300 ribu ✅');
     });
 
     it('BELI_MASJID PENDING_VERIFICATION: ✅ (finance pending rekening koran)', async () => {

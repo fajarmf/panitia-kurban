@@ -282,13 +282,15 @@ export class RekapService {
         // ✅ rule beda per purchase_type:
         //  - BELI_MASJID: ✅ kalau status != PENDING_PAYMENT (PENDING_VERIFICATION
         //    juga ✅ karena finance pending rekening koran).
-        //  - BAWA_SENDIRI: ✅ strict — cuma kalau infaq_paid=true. Status
-        //    CONFIRMED untuk BAWA_SENDIRI cuma artinya admin konfirmasi
-        //    pendaftaran-nya, bukan cash infaq diterima.
+        //  - BAWA_SENDIRI: ✅ kalau infaq_paid=true ATAU status=PENDING_VERIFICATION
+        //    (bukti cash infaq udah diupload, finance pending). Status CONFIRMED
+        //    alone untuk BAWA_SENDIRI bukan signal infaq diterima — admin biasa
+        //    konfirmasi pendaftaran-nya dulu sebelum cash flow di-verify.
         const isBawaSendiri =
           d.purchaseType === ('BAWA_SENDIRI' as never);
         const checked = isBawaSendiri
-          ? d.infaqPaid === true
+          ? d.infaqPaid === true ||
+            d.status === ('PENDING_VERIFICATION' as never)
           : d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true;
         raws.push({
           displayLabel: dn,
