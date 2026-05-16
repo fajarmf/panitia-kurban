@@ -22,21 +22,38 @@ describe('RekapService', () => {
 
   afterEach(() => jest.clearAllMocks());
 
-  const makePk = (overrides: Partial<Pengkurban> = {}): Pengkurban =>
-    ({
+  const DEFAULT_INFAQ: Record<string, number> = {
+    DOMBA: 300000,
+    KAMBING: 300000,
+    SAPI_KOLEKTIF: 300000,
+    SAPI_KOLEKTIF_A: 300000,
+    SAPI_KOLEKTIF_B: 300000,
+    SAPI_KOLEKTIF_C: 300000,
+    SAPI_PERORANGAN: 1750000,
+  };
+
+  const makePk = (overrides: Partial<Pengkurban> = {}): Pengkurban => {
+    const animalType =
+      overrides.animalType ?? ('SAPI_KOLEKTIF_A' as any);
+    return {
       id: overrides.id ?? 'id-1',
       name: overrides.name ?? 'Nama',
       shohibulName: overrides.shohibulName ?? null,
       address: overrides.address ?? null,
-      animalType: overrides.animalType ?? ('SAPI_KOLEKTIF_A' as any),
+      animalType,
       animalSize: overrides.animalSize ?? null,
       purchaseType: overrides.purchaseType ?? ('BELI_MASJID' as any),
       status: overrides.status ?? ('CONFIRMED' as any),
       infaqPaid: overrides.infaqPaid ?? false,
       infaqPaidAt: overrides.infaqPaidAt ?? null,
+      infaqAmount:
+        overrides.infaqAmount !== undefined
+          ? overrides.infaqAmount
+          : DEFAULT_INFAQ[animalType as string] ?? null,
       notes: overrides.notes ?? null,
       createdAt: overrides.createdAt ?? new Date(0),
-    }) as Pengkurban;
+    } as Pengkurban;
+  };
 
   const makeDonation = (overrides: Partial<Donation> = {}): Donation =>
     ({
@@ -452,6 +469,49 @@ describe('RekapService', () => {
       const text = await service.getDonasiRekap();
 
       expect(text).toContain('1. M99/50 300 ribu ✅');
+    });
+
+    it('infaqAmount=null = waiver (di-skip dari rekap, source of truth baru)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'FixtureCash',
+          animalType: 'KAMBING' as any,
+          infaqAmount: 300000,
+          address: 'Margata - M99/80',
+        }),
+        makePk({
+          name: 'FixtureWaived',
+          animalType: 'KAMBING' as any,
+          infaqAmount: null,
+          address: 'Margata - M99/81',
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. M99/80 300 ribu');
+      expect(text).not.toContain('M99/81');
+      expect(text).not.toContain('FixtureWaived');
+    });
+
+    it('infaqAmount override (admin set partial amount)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'FixturePartial',
+          animalType: 'SAPI_PERORANGAN' as any,
+          infaqAmount: 500000,
+          infaqPaid: true,
+          address: 'Margata - M99/82',
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      // Pakai 500rb (override), bukan 1.75jt (default sapi perorangan)
+      expect(text).toContain('1. M99/82 500 ribu ✅');
+      expect(text).not.toContain('1.75 juta');
     });
 
     it('still includes pengkurban with non-marker notes', async () => {

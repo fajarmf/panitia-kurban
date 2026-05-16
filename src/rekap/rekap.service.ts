@@ -275,7 +275,16 @@ export class RekapService {
     const raws: Raw[] = [];
 
     pengkurban
-      .filter((d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d))
+      .filter(
+        (d) =>
+          d.status !== ('REJECTED' as never) &&
+          !hasInfaqWaiver(d) &&
+          // Waiver via kolom infaq_amount: null = di-skip dari rekap. Source
+          // of truth baru — admin set null via UI buat flag jamaah yang ga
+          // perlu bayar cash infaq (mis. bawa sendiri + potongan daging).
+          d.infaqAmount !== null &&
+          d.infaqAmount !== undefined,
+      )
       .forEach((d) => {
         const dn = displayName(d);
         const blok = formatBlokShort(d.address);
@@ -295,7 +304,7 @@ export class RekapService {
         raws.push({
           displayLabel: dn,
           blok,
-          amount: getInfaqAmount(d.animalType as string),
+          amount: Number(d.infaqAmount),
           checked,
           createdAt: d.createdAt,
           key: blok ? `${blok}::${nameKey(dn)}` : `noblok::${dn}`,

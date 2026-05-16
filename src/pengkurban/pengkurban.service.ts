@@ -104,6 +104,12 @@ export class PengkurbanService {
       ...dto,
       registrationNumber,
       status: dto.status ?? RegistrationStatus.CONFIRMED,
+      // Default infaq_amount sesuai animal_type kalau ga di-set di DTO.
+      // DTO bisa explicitly set null untuk flag waiver.
+      infaqAmount:
+        (dto as any).infaqAmount !== undefined
+          ? (dto as any).infaqAmount
+          : getInfaqAmount(dto.animalType),
     });
     return this.pengkurbanRepository.save(pk);
   }
@@ -159,6 +165,7 @@ export class PengkurbanService {
       eventId,
       registrationNumber,
       status: RegistrationStatus.PENDING_PAYMENT,
+      infaqAmount: getInfaqAmount(dto.animalType),
     });
     const saved = await this.pengkurbanRepository.save(pk);
 

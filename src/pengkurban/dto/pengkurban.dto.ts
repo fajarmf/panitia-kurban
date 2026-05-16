@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsNumber,
   Matches,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AnimalType } from '../../common/enums/animal-type.enum';
@@ -54,6 +55,14 @@ export class CreatePengkurbanDto {
   @IsOptional()
   @IsEnum(RegistrationStatus)
   status?: RegistrationStatus;
+
+  // Override default infaq_amount. null = waiver (skip dari rekap).
+  // Undefined = pakai default getInfaqAmount(animalType).
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsNumber()
+  @Type(() => Number)
+  infaqAmount?: number | null;
 }
 
 export class UpdatePengkurbanDto {
@@ -101,4 +110,10 @@ export class UpdatePengkurbanDto {
   @IsOptional()
   @IsEnum(RegistrationStatus)
   status?: RegistrationStatus;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsNumber()
+  @Type(() => Number)
+  infaqAmount?: number | null;
 }
