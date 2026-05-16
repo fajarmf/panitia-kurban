@@ -51,6 +51,10 @@ describe('RekapService', () => {
           ? overrides.infaqAmount
           : DEFAULT_INFAQ[animalType as string] ?? null,
       notes: overrides.notes ?? null,
+      paymentProofPaths:
+        (overrides as any).paymentProofPaths !== undefined
+          ? (overrides as any).paymentProofPaths
+          : null,
       createdAt: overrides.createdAt ?? new Date(0),
     } as Pengkurban;
   };
@@ -62,6 +66,10 @@ describe('RekapService', () => {
       address: overrides.address ?? null,
       amount: overrides.amount ?? 100000,
       status: overrides.status ?? ('CONFIRMED' as any),
+      paymentProofPaths:
+        (overrides as any).paymentProofPaths !== undefined
+          ? (overrides as any).paymentProofPaths
+          : null,
       createdAt: overrides.createdAt ?? new Date(0),
     }) as Donation;
 
@@ -86,6 +94,7 @@ describe('RekapService', () => {
           name: 'Pending Verif',
           status: 'PENDING_VERIFICATION' as any,
           infaqPaid: false,
+          paymentProofPaths: ['proof.jpg'] as any,
         }),
         makePk({
           name: 'Pending Lunas',
@@ -131,6 +140,7 @@ describe('RekapService', () => {
           name: 'Donor B',
           amount: 300000,
           status: 'PENDING_VERIFICATION' as any,
+          paymentProofPaths: ['proof.jpg'] as any,
         }),
         makeDonation({
           name: 'Donor C',
@@ -324,6 +334,35 @@ describe('RekapService', () => {
       expect(text).toContain('2. M99/20 300 ribu ✅');
     });
 
+    it('merge AND ✅: kalau salah satu piece belum ✅, merged entry juga belum ✅', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'FixtureUnchecked',
+          animalType: 'SAPI_PERORANGAN' as any,
+          purchaseType: 'BAWA_SENDIRI' as any,
+          infaqPaid: false,
+          status: 'CONFIRMED' as any,
+          address: 'Margata - M99/50',
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'FixtureUnchecked',
+          amount: 50000,
+          address: 'Margata - M99/50',
+          status: 'CONFIRMED' as any,
+          createdAt: new Date('2030-01-01'),
+        }),
+      ]);
+
+      const text = await service.getDonasiRekap();
+
+      // Total amount sum: 1.75jt + 50rb = 1.8jt. Pengkurban no ✅, donation ✅.
+      // AND merge → keseluruhan tidak ✅.
+      expect(text).toContain('1. M99/50 1.8 juta');
+      expect(text).not.toContain('1. M99/50 1.8 juta ✅');
+    });
+
     it('merge skip honorific saat extract first name (H, Hj, Bin, Binti)', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
@@ -437,6 +476,7 @@ describe('RekapService', () => {
           infaqPaid: false,
           status: 'PENDING_VERIFICATION' as any,
           address: 'Margata - M99/42',
+          paymentProofPaths: ['proof.jpg'] as any,
           createdAt: new Date('2030-01-02'),
         }),
       ]);
@@ -453,6 +493,36 @@ describe('RekapService', () => {
       expect(text).toContain('3. M99/42 300 ribu ✅');
     });
 
+    it('PENDING_VERIFICATION tanpa proof: no ✅ (intent declaration tanpa bukti transfer)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'FixtureNoProof',
+          amount: 50000,
+          address: 'Margata - M99/60',
+          status: 'PENDING_VERIFICATION' as any,
+          paymentProofPaths: null as any,
+          createdAt: new Date('2030-01-01'),
+        }),
+        makeDonation({
+          name: 'FixtureWithProof',
+          amount: 100000,
+          address: 'Margata - M99/61',
+          status: 'PENDING_VERIFICATION' as any,
+          paymentProofPaths: ['x.jpg'] as any,
+          createdAt: new Date('2030-01-02'),
+        }),
+      ]);
+
+      const text = await service.getDonasiRekap();
+
+      // No proof: tampil tanpa ✅
+      expect(text).toContain('1. M99/60 50 ribu');
+      expect(text).not.toContain('1. M99/60 50 ribu ✅');
+      // With proof: ✅
+      expect(text).toContain('2. M99/61 100 ribu ✅');
+    });
+
     it('BELI_MASJID PENDING_VERIFICATION: ✅ (finance pending rekening koran)', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
@@ -462,6 +532,7 @@ describe('RekapService', () => {
           infaqPaid: false,
           status: 'PENDING_VERIFICATION' as any,
           address: 'Margata - M99/50',
+          paymentProofPaths: ['proof.jpg'] as any,
         }),
       ]);
       donationRepo.find.mockResolvedValue([]);

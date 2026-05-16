@@ -19,6 +19,13 @@ function hasInfaqWaiver(p: Pengkurban): boolean {
   return /infaq\s*:\s*(potongan|waived)/i.test(p.notes);
 }
 
+// Cek apakah row punya bukti pembayaran ke-upload (file paths non-empty).
+// PENDING_VERIFICATION rows tanpa proof biasanya admin manual entry (intent
+// declaration), bukan transfer beneran yang nunggu finance verify.
+function hasProof(p: { paymentProofPaths?: string[] | null }): boolean {
+  return Array.isArray(p.paymentProofPaths) && p.paymentProofPaths.length > 0;
+}
+
 
 const REKENING_DEFAULT =
   'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11';
@@ -288,19 +295,19 @@ export class RekapService {
       .forEach((d) => {
         const dn = displayName(d);
         const blok = formatBlokShort(d.address);
-        // ✅ rule beda per purchase_type:
-        //  - BELI_MASJID: ✅ kalau status != PENDING_PAYMENT (PENDING_VERIFICATION
-        //    juga ✅ karena finance pending rekening koran).
-        //  - BAWA_SENDIRI: ✅ kalau infaq_paid=true ATAU status=PENDING_VERIFICATION
-        //    (bukti cash infaq udah diupload, finance pending). Status CONFIRMED
-        //    alone untuk BAWA_SENDIRI bukan signal infaq diterima — admin biasa
-        //    konfirmasi pendaftaran-nya dulu sebelum cash flow di-verify.
+        // ✅ rule:
+        //  - infaq_paid=true → ✅ (admin sudah confirm cash infaq received)
+        //  - BELI_MASJID + CONFIRMED → ✅ (paid in full termasuk infaq)
+        //  - PENDING_VERIFICATION + ada bukti upload → ✅ (proof there, finance
+        //    pending rekening koran)
+        // BAWA_SENDIRI + CONFIRMED (tanpa infaq_paid=true) ga otomatis ✅ —
+        // CONFIRMED untuk bawa-sendiri cuma konfirmasi reg, bukan cash flow.
         const isBawaSendiri =
           d.purchaseType === ('BAWA_SENDIRI' as never);
-        const checked = isBawaSendiri
-          ? d.infaqPaid === true ||
-            d.status === ('PENDING_VERIFICATION' as never)
-          : d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true;
+        const checked =
+          d.infaqPaid === true ||
+          (!isBawaSendiri && d.status === ('CONFIRMED' as never)) ||
+          (d.status === ('PENDING_VERIFICATION' as never) && hasProof(d));
         raws.push({
           displayLabel: dn,
           blok,
@@ -315,24 +322,31 @@ export class RekapService {
       .filter((d) => d.status !== ('REJECTED' as never))
       .forEach((d) => {
         const blok = formatBlokShort(d.address);
+        // Donation ✅: CONFIRMED langsung ✅, PENDING_VERIFICATION cuma kalau
+        // ada bukti upload. Donation tanpa proof = admin manual record intent,
+        // bukan transfer yang nunggu finance.
+        const checked =
+          d.status === ('CONFIRMED' as never) ||
+          (d.status === ('PENDING_VERIFICATION' as never) && hasProof(d));
         raws.push({
           displayLabel: d.name,
           blok,
           amount: d.amount == null ? 0 : Number(d.amount),
-          checked: true,
+          checked,
           createdAt: d.createdAt,
           key: blok ? `${blok}::${nameKey(d.name)}` : `noblok::${d.name}`,
         });
       });
 
-    // Merge raws dengan key sama — sum amounts, OR-merge checked, earliest createdAt.
+    // Merge raws dengan key sama — sum amounts, AND-merge checked (semua
+    // pieces harus ✅ supaya merged entry juga ✅), earliest createdAt.
     // Privacy: display pakai blok kalau ada, fallback ke nama.
     const grouped = new Map<string, Entry>();
     raws.forEach((r) => {
       const existing = grouped.get(r.key);
       if (existing) {
         existing.amount += r.amount;
-        existing.checked = existing.checked || r.checked;
+        existing.checked = existing.checked && r.checked;
         if (
           r.createdAt &&
           (!existing.createdAt ||
