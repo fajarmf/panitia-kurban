@@ -217,42 +217,68 @@ export class RekapService {
       this.fetchPengkurban(eventId),
     ]);
 
-    const activeDonations = donations.filter(
-      (d) => d.status !== ('REJECTED' as never),
-    );
+    // Merged single list: pengkurban (sohibul infaq) + donations (sukarela).
+    // ✅ rule:
+    //  - Pengkurban: ✅ kalau bukan PENDING_PAYMENT atau infaq_paid sudah true.
+    //    Status PENDING_VERIFICATION → ✅ (bank statement masih nunggu, finance
+    //    belum bisa verify tapi pembayar udah upload bukti).
+    //  - Donation: ✅ kalau non-REJECTED (status di donasi: CONFIRMED atau
+    //    PENDING_VERIFICATION → keduanya ✅).
+    //  - Pengkurban dengan infaq waiver marker (potongan / waived) di-skip dari list.
+    type Entry = {
+      name: string;
+      blok: string;
+      amount: number;
+      checked: boolean;
+      createdAt: Date;
+    };
+
+    const entries: Entry[] = [];
+
+    pengkurban
+      .filter((d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d))
+      .forEach((d) => {
+        entries.push({
+          name: displayName(d),
+          blok: formatBlokShort(d.address),
+          amount: getInfaqAmount(d.animalType as string),
+          checked:
+            d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true,
+          createdAt: d.createdAt,
+        });
+      });
+
+    donations
+      .filter((d) => d.status !== ('REJECTED' as never))
+      .forEach((d) => {
+        entries.push({
+          name: d.name,
+          blok: formatBlokShort(d.address),
+          amount: d.amount == null ? 0 : Number(d.amount),
+          checked: true,
+          createdAt: d.createdAt,
+        });
+      });
+
+    entries.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return ta - tb;
+    });
 
     const lines: string[] = [`*List Sumbangan Kegiatan Idul Qurban*`, ``];
 
-    // Sohibul Qurban — semua active (non-REJECTED), ✅ kalau infaq_paid.
-    // Skip pengkurban yang infaq-nya via potongan daging / institutional
-    // sumbangan — mereka ga kontribusi cash infaq, jadi out-of-scope buat
-    // rekap donasi.
-    const pkActive = pengkurban.filter(
-      (d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d),
-    );
-    lines.push(`• Sohibul Qurban`);
-    if (pkActive.length) {
-      pkActive.forEach((d, i) => {
-        const name = displayName(d);
-        const amt = formatRibu(getInfaqAmount(d.animalType as string));
-        const check = d.infaqPaid ? ' ✅' : '';
-        lines.push(`${i + 1}. ${name}${amt ? ' ' + amt : ''}${check}`);
+    if (entries.length) {
+      entries.forEach((e, i) => {
+        const parts = [`${i + 1}.`, e.name];
+        if (e.blok) parts.push(e.blok);
+        const amt = formatRibu(e.amount);
+        if (amt) parts.push(amt);
+        if (e.checked) parts.push('✅');
+        lines.push(parts.join(' '));
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
-    }
-    lines.push(``);
-
-    // Sukarela Warga — semua active (non-REJECTED), ✅ kalau CONFIRMED
-    lines.push(`• Sukarela Warga`);
-    if (activeDonations.length) {
-      activeDonations.forEach((d, i) => {
-        const amt = formatRibu(d.amount == null ? null : Number(d.amount));
-        const check = d.status === ('CONFIRMED' as never) ? ' ✅' : '';
-        lines.push(`${i + 1}. ${d.name}${amt ? ' ' + amt : ''}${check}`);
-      });
-    } else {
-      [1, 2, 3, 4, 5].forEach((i) => lines.push(`${i}. ...`));
     }
     lines.push(``);
 

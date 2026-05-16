@@ -35,22 +35,25 @@ describe('RekapService', () => {
       infaqPaid: overrides.infaqPaid ?? false,
       infaqPaidAt: overrides.infaqPaidAt ?? null,
       notes: overrides.notes ?? null,
+      createdAt: overrides.createdAt ?? new Date(0),
     }) as Pengkurban;
 
   const makeDonation = (overrides: Partial<Donation> = {}): Donation =>
     ({
       id: overrides.id ?? 'd-1',
       name: overrides.name ?? 'Donor',
+      address: overrides.address ?? null,
       amount: overrides.amount ?? 100000,
       status: overrides.status ?? ('CONFIRMED' as any),
+      createdAt: overrides.createdAt ?? new Date(0),
     }) as Donation;
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('getDonasiRekap — sohibul section', () => {
-    it('shows all non-rejected pengkurban with ✅ only when infaqPaid=true', async () => {
+  describe('getDonasiRekap — merged ✅ rule', () => {
+    it('pengkurban: ✅ unless status=PENDING_PAYMENT and infaqPaid=false; rejected skipped', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
           name: 'Confirmed Lunas',
@@ -60,6 +63,11 @@ describe('RekapService', () => {
         makePk({
           name: 'Confirmed Belum',
           status: 'CONFIRMED' as any,
+          infaqPaid: false,
+        }),
+        makePk({
+          name: 'Pending Verif',
+          status: 'PENDING_VERIFICATION' as any,
           infaqPaid: false,
         }),
         makePk({
@@ -82,17 +90,19 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
+      // Status != PENDING_PAYMENT → ✅
       expect(text).toContain('1. Confirmed Lunas 300 ribu ✅');
-      expect(text).toContain('2. Confirmed Belum 300 ribu');
-      expect(text).not.toContain('Confirmed Belum 300 ribu ✅');
-      expect(text).toContain('3. Pending Lunas 300 ribu ✅');
-      expect(text).toContain('4. Pending Belum 300 ribu');
+      expect(text).toContain('2. Confirmed Belum 300 ribu ✅');
+      expect(text).toContain('3. Pending Verif 300 ribu ✅');
+      // PENDING_PAYMENT tapi infaqPaid=true → tetap ✅
+      expect(text).toContain('4. Pending Lunas 300 ribu ✅');
+      // PENDING_PAYMENT + infaqPaid=false → no ✅
+      expect(text).toContain('5. Pending Belum 300 ribu');
+      expect(text).not.toContain('Pending Belum 300 ribu ✅');
       expect(text).not.toContain('Rejected');
     });
-  });
 
-  describe('getDonasiRekap — sukarela warga section', () => {
-    it('shows ✅ only for CONFIRMED donations', async () => {
+    it('donation: ✅ untuk semua non-REJECTED (CONFIRMED dan PENDING_VERIFICATION)', async () => {
       pengkurbanRepo.find.mockResolvedValue([]);
       donationRepo.find.mockResolvedValue([
         makeDonation({
@@ -115,9 +125,65 @@ describe('RekapService', () => {
       const text = await service.getDonasiRekap();
 
       expect(text).toContain('1. Donor A 500 ribu ✅');
-      expect(text).toContain('2. Donor B 300 ribu');
-      expect(text).not.toContain('Donor B 300 ribu ✅');
+      expect(text).toContain('2. Donor B 300 ribu ✅');
       expect(text).not.toContain('Donor C');
+    });
+
+    it('pengkurban + donations merged ke 1 numbered list, urut createdAt ASC', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'PK Awal',
+          animalType: 'KAMBING' as any,
+          createdAt: new Date('2026-04-01'),
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'PK Akhir',
+          animalType: 'KAMBING' as any,
+          createdAt: new Date('2026-04-10'),
+          infaqPaid: true,
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'Don Tengah',
+          amount: 100000,
+          createdAt: new Date('2026-04-05'),
+        }),
+      ]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. PK Awal');
+      expect(text).toContain('2. Don Tengah');
+      expect(text).toContain('3. PK Akhir');
+      expect(text).not.toContain('• Sohibul Qurban');
+      expect(text).not.toContain('• Sukarela Warga');
+    });
+
+    it('appends blok address antara nama dan amount', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'Fajar',
+          animalType: 'SAPI_PERORANGAN' as any,
+          address: 'Margata - Jl Margata 7 no 38 Cimanggis',
+          infaqPaid: true,
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'Donor',
+          amount: 500000,
+          address: 'Margata - M3/51',
+          status: 'CONFIRMED' as any,
+          createdAt: new Date('2030-01-01'),
+        }),
+      ]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. Fajar M7/38 1750 ribu ✅');
+      expect(text).toContain('2. Donor M3/51 500 ribu ✅');
     });
   });
 
