@@ -19,13 +19,6 @@ function hasInfaqWaiver(p: Pengkurban): boolean {
   return /infaq\s*:\s*(potongan|waived)/i.test(p.notes);
 }
 
-// Match marker almarhum/almarhumah (e.g. "binti Mulyadi (alm)") di shohibul name.
-// Buat entries kayak gini kita hide nama biar privacy keluarga terjaga — fallback
-// ke blok address aja.
-function hasAlmMarker(displayName: string | null | undefined): boolean {
-  if (!displayName) return false;
-  return /\((alm|almarhum(?:ah)?)\)/i.test(displayName);
-}
 
 const REKENING_DEFAULT =
   'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11';
@@ -243,14 +236,13 @@ export class RekapService {
 
     const entries: Entry[] = [];
 
+    // Privacy: nama di-hide untuk semua entry — output cuma blok address.
+    // Fallback ke nama kalau blok kosong, biar baris ga jadi anonim total.
     pengkurban
       .filter((d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d))
       .forEach((d) => {
-        const dn = displayName(d);
         const blok = formatBlokShort(d.address);
-        // Kalau ada marker (alm) di nama, hide nama; pakai blok aja.
-        // Fallback ke nama kalau ga ada blok.
-        const name = hasAlmMarker(dn) && blok ? '' : dn;
+        const name = blok ? '' : displayName(d);
         entries.push({
           name,
           blok,
@@ -264,9 +256,11 @@ export class RekapService {
     donations
       .filter((d) => d.status !== ('REJECTED' as never))
       .forEach((d) => {
+        const blok = formatBlokShort(d.address);
+        const name = blok ? '' : d.name;
         entries.push({
-          name: d.name,
-          blok: formatBlokShort(d.address),
+          name,
+          blok,
           amount: d.amount == null ? 0 : Number(d.amount),
           checked: true,
           createdAt: d.createdAt,

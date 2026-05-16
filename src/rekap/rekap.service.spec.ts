@@ -161,51 +161,59 @@ describe('RekapService', () => {
       expect(text).not.toContain('• Sukarela Warga');
     });
 
-    it('hide nama pengkurban yang shohibul-nya ada marker "(alm)" — pakai blok aja', async () => {
+    it('hide nama untuk semua entry — output pakai blok aja (privacy)', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
-          name: 'FixtureAlm',
-          shohibulName: 'FixtureAlm bin Tester (alm)',
+          name: 'FixtureP',
           animalType: 'KAMBING' as any,
           address: 'Margata - M99/01',
           infaqPaid: true,
         }),
-        makePk({
-          name: 'FixtureAlmh',
-          shohibulName: 'FixtureAlmh binti Tester (almarhumah)',
-          animalType: 'KAMBING' as any,
+      ]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'FixtureD',
+          amount: 250000,
           address: 'Margata - M99/02',
-          infaqPaid: true,
+          status: 'CONFIRMED' as any,
+          createdAt: new Date('2030-01-01'),
         }),
       ]);
-      donationRepo.find.mockResolvedValue([]);
 
       const text = await service.getDonasiRekap();
 
       expect(text).toContain('1. M99/01 300 ribu ✅');
-      expect(text).not.toContain('FixtureAlm bin');
-      expect(text).toContain('2. M99/02 300 ribu ✅');
-      expect(text).not.toContain('FixtureAlmh binti');
+      expect(text).toContain('2. M99/02 250 ribu ✅');
+      expect(text).not.toContain('FixtureP');
+      expect(text).not.toContain('FixtureD');
     });
 
-    it('keep nama (alm) kalau blok kosong (fallback)', async () => {
+    it('fallback ke nama kalau address null (blok kosong)', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
-          name: 'FixtureAlm',
-          shohibulName: 'FixtureAlm bin Tester (alm)',
+          name: 'FixtureNoAddr',
           animalType: 'KAMBING' as any,
           address: null,
           infaqPaid: true,
         }),
       ]);
-      donationRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'FixtureDonorNoAddr',
+          amount: 100000,
+          address: null,
+          status: 'CONFIRMED' as any,
+          createdAt: new Date('2030-01-01'),
+        }),
+      ]);
 
       const text = await service.getDonasiRekap();
 
-      expect(text).toContain('1. FixtureAlm bin Tester (alm) 300 ribu ✅');
+      expect(text).toContain('1. FixtureNoAddr 300 ribu ✅');
+      expect(text).toContain('2. FixtureDonorNoAddr 100 ribu ✅');
     });
 
-    it('appends blok address antara nama dan amount', async () => {
+    it('renders blok + amount only (no name) when address tersedia', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
           name: 'FixtureP',
@@ -226,8 +234,8 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
-      expect(text).toContain('1. FixtureP M99/1 1750 ribu ✅');
-      expect(text).toContain('2. FixtureD M99/02 500 ribu ✅');
+      expect(text).toContain('1. M99/1 1750 ribu ✅');
+      expect(text).toContain('2. M99/02 500 ribu ✅');
     });
   });
 
