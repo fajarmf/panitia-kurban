@@ -19,6 +19,7 @@ function hasInfaqWaiver(p: Pengkurban): boolean {
   return /infaq\s*:\s*(potongan|waived)/i.test(p.notes);
 }
 
+
 const REKENING_DEFAULT =
   'Rekening Bank Muamalat | 12 1010 4479 a/n Masjid Al Hijrah CGE 11';
 
@@ -30,7 +31,8 @@ function getRekening(): string {
 
 // Display-oriented blok extractor for rekap pengkurban. Returns uppercase,
 // space-separated tokens matching the format panitia broadcasts use
-// (e.g. "NHT 3/50", "M6/102", "MGT 2/22"). Empty string if no address.
+// (e.g. "NHT 3/50", "M6/102"). MGT cluster di-normalize ke M (per konvensi
+// broadcast). Empty string if no address.
 function formatBlokShort(addr: string | null | undefined): string {
   if (!addr) return '';
   let s = String(addr).split('\n')[0].trim();
@@ -39,15 +41,23 @@ function formatBlokShort(addr: string | null | undefined): string {
   let m = s.match(/^Nahara(?:\s+Timur)?\s*-\s*(.+)$/i);
   if (m) {
     const rest = m[1].trim();
+    // "NHT8-16" / "NHT 8/16" / "8-16" / "8/16" → "NHT 8/16"
+    const numPair = rest.match(/^(?:NHT\s*)?(\d+)\s*[-/\\]\s*(\d+)\s*$/i);
+    if (numPair) return `NHT ${numPair[1]}/${numPair[2]}`;
     const nht = rest.match(/^NHT\s*(.+)$/i);
     return nht ? `NHT ${nht[1].trim()}` : `NHT ${rest}`;
   }
   m = s.match(/Margata\s+(\d+)\s+no\.?\s*(\d+)/i);
   if (m) return `M${m[1]}/${m[2]}`;
+  m = s.match(/^Margata\s*(\d+)\s*[/\\]\s*(\d+)/i);
+  if (m) return `M${m[1]}/${m[2]}`;
   m = s.match(/^Uenos\s*(\d+)\s*[/\\]\s*(\d+)/i);
   if (m) return `U${m[1]}/${m[2]}`;
-  m = s.match(/^MGT\b\s*(.+)$/i);
-  if (m) return `MGT ${m[1].trim()}`;
+  // MGT → M: "MGT 6/28" → "M6/28", "MGT 3" → "M3"
+  m = s.match(/^MGT\s*(\d+)\s*[/\\]\s*(\d+)/i);
+  if (m) return `M${m[1]}/${m[2]}`;
+  m = s.match(/^MGT\s*(\d+)\b/i);
+  if (m) return `M${m[1]}`;
   m = s.match(/^M\s*(\d+)\s*[/\\]\s*(\d+)/i);
   if (m) return `M${m[1]}/${m[2]}`;
   m = s.match(/^M\s*(\d+)\b/i);
@@ -57,10 +67,30 @@ function formatBlokShort(addr: string | null | undefined): string {
   return s;
 }
 
+// Normalize name untuk merge key — extract first significant token
+// (skip honorifics & single-letter abbreviations like "H").
+function nameKey(name: string | null | undefined): string {
+  if (!name) return '';
+  const HONORIFICS =
+    /^(h|hj|bu|pak|mas|mba|mbak|ibu|bapak|bpk|bin|binti|alm|almarhum|almarhumah|al|tn|ny)$/i;
+  const tokens = String(name)
+    .split('\n')[0]
+    .toLowerCase()
+    .replace(/[.,()]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length > 1 && !HONORIFICS.test(t));
+  return tokens[0] || '';
+}
+
 function formatRibu(amount: number | null | undefined): string {
   if (amount == null || amount === 0) return '';
-  if (amount >= 1_000_000 && amount % 1_000_000 === 0)
-    return `${amount / 1_000_000} juta`;
+  // ≥ 1 juta: pakai unit "juta" (2 desimal max, no trailing zeros).
+  // 1_000_000 → "1 juta", 1_750_000 → "1.75 juta", 2_050_000 → "2.05 juta".
+  if (amount >= 1_000_000) {
+    const juta = amount / 1_000_000;
+    const str = juta.toFixed(2).replace(/\.?0+$/, '');
+    return `${str} juta`;
+  }
   if (amount % 1000 === 0) return `${amount / 1000} ribu`;
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }
@@ -217,42 +247,133 @@ export class RekapService {
       this.fetchPengkurban(eventId),
     ]);
 
-    const activeDonations = donations.filter(
-      (d) => d.status !== ('REJECTED' as never),
-    );
+    // Merged single list: pengkurban (sohibul infaq) + donations (sukarela).
+    // ✅ rule:
+    //  - Pengkurban: ✅ kalau bukan PENDING_PAYMENT atau infaq_paid sudah true.
+    //    Status PENDING_VERIFICATION → ✅ (bank statement masih nunggu, finance
+    //    belum bisa verify tapi pembayar udah upload bukti).
+    //  - Donation: ✅ kalau non-REJECTED (status di donasi: CONFIRMED atau
+    //    PENDING_VERIFICATION → keduanya ✅).
+    //  - Pengkurban dengan infaq waiver marker (potongan / waived) di-skip dari list.
+    type Entry = {
+      name: string;
+      blok: string;
+      amount: number;
+      checked: boolean;
+      createdAt: Date;
+    };
+
+    type Raw = {
+      displayLabel: string; // nama mentah, buat fallback display kalau blok kosong
+      blok: string;
+      amount: number;
+      checked: boolean;
+      createdAt: Date;
+      key: string; // merge key: blok + first-name-token
+    };
+
+    const raws: Raw[] = [];
+
+    pengkurban
+      .filter(
+        (d) =>
+          d.status !== ('REJECTED' as never) &&
+          !hasInfaqWaiver(d) &&
+          // Waiver via kolom infaq_amount: null = di-skip dari rekap. Source
+          // of truth baru — admin set null via UI buat flag jamaah yang ga
+          // perlu bayar cash infaq (mis. bawa sendiri + potongan daging).
+          d.infaqAmount !== null &&
+          d.infaqAmount !== undefined,
+      )
+      .forEach((d) => {
+        const dn = displayName(d);
+        const blok = formatBlokShort(d.address);
+        // ✅ rule beda per purchase_type:
+        //  - BELI_MASJID: ✅ kalau status != PENDING_PAYMENT (PENDING_VERIFICATION
+        //    juga ✅ karena finance pending rekening koran).
+        //  - BAWA_SENDIRI: ✅ kalau infaq_paid=true ATAU status=PENDING_VERIFICATION
+        //    (bukti cash infaq udah diupload, finance pending). Status CONFIRMED
+        //    alone untuk BAWA_SENDIRI bukan signal infaq diterima — admin biasa
+        //    konfirmasi pendaftaran-nya dulu sebelum cash flow di-verify.
+        const isBawaSendiri =
+          d.purchaseType === ('BAWA_SENDIRI' as never);
+        const checked = isBawaSendiri
+          ? d.infaqPaid === true ||
+            d.status === ('PENDING_VERIFICATION' as never)
+          : d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true;
+        raws.push({
+          displayLabel: dn,
+          blok,
+          amount: Number(d.infaqAmount),
+          checked,
+          createdAt: d.createdAt,
+          key: blok ? `${blok}::${nameKey(dn)}` : `noblok::${dn}`,
+        });
+      });
+
+    donations
+      .filter((d) => d.status !== ('REJECTED' as never))
+      .forEach((d) => {
+        const blok = formatBlokShort(d.address);
+        raws.push({
+          displayLabel: d.name,
+          blok,
+          amount: d.amount == null ? 0 : Number(d.amount),
+          checked: true,
+          createdAt: d.createdAt,
+          key: blok ? `${blok}::${nameKey(d.name)}` : `noblok::${d.name}`,
+        });
+      });
+
+    // Merge raws dengan key sama — sum amounts, OR-merge checked, earliest createdAt.
+    // Privacy: display pakai blok kalau ada, fallback ke nama.
+    const grouped = new Map<string, Entry>();
+    raws.forEach((r) => {
+      const existing = grouped.get(r.key);
+      if (existing) {
+        existing.amount += r.amount;
+        existing.checked = existing.checked || r.checked;
+        if (
+          r.createdAt &&
+          (!existing.createdAt ||
+            new Date(r.createdAt).getTime() <
+              new Date(existing.createdAt).getTime())
+        ) {
+          existing.createdAt = r.createdAt;
+        }
+      } else {
+        grouped.set(r.key, {
+          name: r.blok ? '' : r.displayLabel,
+          blok: r.blok,
+          amount: r.amount,
+          checked: r.checked,
+          createdAt: r.createdAt,
+        });
+      }
+    });
+
+    const entries: Entry[] = [...grouped.values()];
+
+    entries.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return ta - tb;
+    });
 
     const lines: string[] = [`*List Sumbangan Kegiatan Idul Qurban*`, ``];
 
-    // Sohibul Qurban — semua active (non-REJECTED), ✅ kalau infaq_paid.
-    // Skip pengkurban yang infaq-nya via potongan daging / institutional
-    // sumbangan — mereka ga kontribusi cash infaq, jadi out-of-scope buat
-    // rekap donasi.
-    const pkActive = pengkurban.filter(
-      (d) => d.status !== ('REJECTED' as never) && !hasInfaqWaiver(d),
-    );
-    lines.push(`• Sohibul Qurban`);
-    if (pkActive.length) {
-      pkActive.forEach((d, i) => {
-        const name = displayName(d);
-        const amt = formatRibu(getInfaqAmount(d.animalType as string));
-        const check = d.infaqPaid ? ' ✅' : '';
-        lines.push(`${i + 1}. ${name}${amt ? ' ' + amt : ''}${check}`);
+    if (entries.length) {
+      entries.forEach((e, i) => {
+        const parts = [`${i + 1}.`];
+        if (e.name) parts.push(e.name);
+        if (e.blok) parts.push(e.blok);
+        const amt = formatRibu(e.amount);
+        if (amt) parts.push(amt);
+        if (e.checked) parts.push('✅');
+        lines.push(parts.join(' '));
       });
     } else {
       [1, 2, 3].forEach((i) => lines.push(`${i}. ...`));
-    }
-    lines.push(``);
-
-    // Sukarela Warga — semua active (non-REJECTED), ✅ kalau CONFIRMED
-    lines.push(`• Sukarela Warga`);
-    if (activeDonations.length) {
-      activeDonations.forEach((d, i) => {
-        const amt = formatRibu(d.amount == null ? null : Number(d.amount));
-        const check = d.status === ('CONFIRMED' as never) ? ' ✅' : '';
-        lines.push(`${i + 1}. ${d.name}${amt ? ' ' + amt : ''}${check}`);
-      });
-    } else {
-      [1, 2, 3, 4, 5].forEach((i) => lines.push(`${i}. ...`));
     }
     lines.push(``);
 
