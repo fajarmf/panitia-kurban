@@ -161,20 +161,64 @@ describe('RekapService', () => {
       expect(text).not.toContain('• Sukarela Warga');
     });
 
+    it('hide nama pengkurban yang shohibul-nya ada marker "(alm)" — pakai blok aja', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'FixtureAlm',
+          shohibulName: 'FixtureAlm bin Tester (alm)',
+          animalType: 'KAMBING' as any,
+          address: 'Margata - M99/01',
+          infaqPaid: true,
+        }),
+        makePk({
+          name: 'FixtureAlmh',
+          shohibulName: 'FixtureAlmh binti Tester (almarhumah)',
+          animalType: 'KAMBING' as any,
+          address: 'Margata - M99/02',
+          infaqPaid: true,
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. M99/01 300 ribu ✅');
+      expect(text).not.toContain('FixtureAlm bin');
+      expect(text).toContain('2. M99/02 300 ribu ✅');
+      expect(text).not.toContain('FixtureAlmh binti');
+    });
+
+    it('keep nama (alm) kalau blok kosong (fallback)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([
+        makePk({
+          name: 'FixtureAlm',
+          shohibulName: 'FixtureAlm bin Tester (alm)',
+          animalType: 'KAMBING' as any,
+          address: null,
+          infaqPaid: true,
+        }),
+      ]);
+      donationRepo.find.mockResolvedValue([]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1. FixtureAlm bin Tester (alm) 300 ribu ✅');
+    });
+
     it('appends blok address antara nama dan amount', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
-          name: 'Fajar',
+          name: 'FixtureP',
           animalType: 'SAPI_PERORANGAN' as any,
-          address: 'Margata - Jl Margata 7 no 38 Cimanggis',
+          address: 'Margata - Jl Margata 99 no 1 Test',
           infaqPaid: true,
         }),
       ]);
       donationRepo.find.mockResolvedValue([
         makeDonation({
-          name: 'Donor',
+          name: 'FixtureD',
           amount: 500000,
-          address: 'Margata - M3/51',
+          address: 'Margata - M99/02',
           status: 'CONFIRMED' as any,
           createdAt: new Date('2030-01-01'),
         }),
@@ -182,8 +226,8 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
-      expect(text).toContain('1. Fajar M7/38 1750 ribu ✅');
-      expect(text).toContain('2. Donor M3/51 500 ribu ✅');
+      expect(text).toContain('1. FixtureP M99/1 1750 ribu ✅');
+      expect(text).toContain('2. FixtureD M99/02 500 ribu ✅');
     });
   });
 
@@ -422,31 +466,31 @@ describe('RekapService', () => {
     it('appends short blok between name and ✅ for kolektif, perorangan, kambing/domba', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
-          name: 'Yulham',
+          name: 'FixtureK',
           animalType: 'SAPI_KOLEKTIF_B' as any,
-          address: 'Nahara Timur - 3/50',
+          address: 'Nahara Timur - 9/99',
           infaqPaid: true,
         }),
         makePk({
-          name: 'Fajar',
+          name: 'FixtureP',
           animalType: 'SAPI_PERORANGAN' as any,
-          address: 'Margata - Jl Margata 7 no 38 Cimanggis',
+          address: 'Margata - Jl Margata 99 no 1 Test',
           infaqPaid: true,
         }),
         makePk({
-          name: 'Hadi',
+          name: 'FixtureD',
           animalType: 'DOMBA' as any,
           animalSize: 'Tipe A',
-          address: 'Margata - M6/63',
+          address: 'Margata - M99/02',
           infaqPaid: true,
         }),
       ]);
 
       const text = await service.getPengkurbanRekap();
 
-      expect(text).toContain('1. Yulham NHT 3/50 ✅');
-      expect(text).toContain('1. Fajar M7/38 ✅');
-      expect(text).toContain('1. Hadi (Domba - Tipe A) M6/63 ✅');
+      expect(text).toContain('1. FixtureK NHT 9/99 ✅');
+      expect(text).toContain('1. FixtureP M99/1 ✅');
+      expect(text).toContain('1. FixtureD (Domba - Tipe A) M99/02 ✅');
     });
 
     it('omits address segment when address is null/empty', async () => {
