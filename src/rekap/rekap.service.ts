@@ -279,12 +279,22 @@ export class RekapService {
       .forEach((d) => {
         const dn = displayName(d);
         const blok = formatBlokShort(d.address);
+        // ✅ rule beda per purchase_type:
+        //  - BELI_MASJID: ✅ kalau status != PENDING_PAYMENT (PENDING_VERIFICATION
+        //    juga ✅ karena finance pending rekening koran).
+        //  - BAWA_SENDIRI: ✅ strict — cuma kalau infaq_paid=true. Status
+        //    CONFIRMED untuk BAWA_SENDIRI cuma artinya admin konfirmasi
+        //    pendaftaran-nya, bukan cash infaq diterima.
+        const isBawaSendiri =
+          d.purchaseType === ('BAWA_SENDIRI' as never);
+        const checked = isBawaSendiri
+          ? d.infaqPaid === true
+          : d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true;
         raws.push({
           displayLabel: dn,
           blok,
           amount: getInfaqAmount(d.animalType as string),
-          checked:
-            d.status !== ('PENDING_PAYMENT' as never) || d.infaqPaid === true,
+          checked,
           createdAt: d.createdAt,
           key: blok ? `${blok}::${nameKey(dn)}` : `noblok::${dn}`,
         });
