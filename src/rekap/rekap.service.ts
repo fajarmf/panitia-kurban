@@ -41,6 +41,9 @@ function formatBlokShort(addr: string | null | undefined): string {
   let m = s.match(/^Nahara(?:\s+Timur)?\s*-\s*(.+)$/i);
   if (m) {
     const rest = m[1].trim();
+    // "NHT8-16" / "NHT 8/16" / "8-16" / "8/16" → "NHT 8/16"
+    const numPair = rest.match(/^(?:NHT\s*)?(\d+)\s*[-/\\]\s*(\d+)\s*$/i);
+    if (numPair) return `NHT ${numPair[1]}/${numPair[2]}`;
     const nht = rest.match(/^NHT\s*(.+)$/i);
     return nht ? `NHT ${nht[1].trim()}` : `NHT ${rest}`;
   }
@@ -81,8 +84,13 @@ function nameKey(name: string | null | undefined): string {
 
 function formatRibu(amount: number | null | undefined): string {
   if (amount == null || amount === 0) return '';
-  if (amount >= 1_000_000 && amount % 1_000_000 === 0)
-    return `${amount / 1_000_000} juta`;
+  // ≥ 1 juta: pakai unit "juta" (2 desimal max, no trailing zeros).
+  // 1_000_000 → "1 juta", 1_750_000 → "1.75 juta", 2_050_000 → "2.05 juta".
+  if (amount >= 1_000_000) {
+    const juta = amount / 1_000_000;
+    const str = juta.toFixed(2).replace(/\.?0+$/, '');
+    return `${str} juta`;
+  }
   if (amount % 1000 === 0) return `${amount / 1000} ribu`;
   return `Rp ${amount.toLocaleString('id-ID')}`;
 }

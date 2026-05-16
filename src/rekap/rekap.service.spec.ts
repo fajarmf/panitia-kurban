@@ -213,6 +213,45 @@ describe('RekapService', () => {
       expect(text).toContain('2. FixtureDonorNoAddr 100 ribu ✅');
     });
 
+    it('formatRibu: ≥1jt pakai unit juta dengan 2 desimal max (no trailing zeros)', async () => {
+      pengkurbanRepo.find.mockResolvedValue([]);
+      donationRepo.find.mockResolvedValue([
+        makeDonation({
+          name: 'A',
+          amount: 1_000_000,
+          address: 'Margata - M99/01',
+          createdAt: new Date('2030-01-01'),
+        }),
+        makeDonation({
+          name: 'B',
+          amount: 1_500_000,
+          address: 'Margata - M99/02',
+          createdAt: new Date('2030-01-02'),
+        }),
+        makeDonation({
+          name: 'C',
+          amount: 2_050_000,
+          address: 'Margata - M99/03',
+          createdAt: new Date('2030-01-03'),
+        }),
+        makeDonation({
+          name: 'D',
+          amount: 1_450_000,
+          address: 'Margata - M99/04',
+          createdAt: new Date('2030-01-04'),
+        }),
+      ]);
+
+      const text = await service.getDonasiRekap();
+
+      expect(text).toContain('1 juta');
+      expect(text).toContain('1.5 juta');
+      expect(text).toContain('2.05 juta');
+      expect(text).toContain('1.45 juta');
+      expect(text).not.toContain('1000 ribu');
+      expect(text).not.toContain('2050 ribu');
+    });
+
     it('merge entries dari orang yang sama (same blok + first name) — sum amount', async () => {
       pengkurbanRepo.find.mockResolvedValue([
         makePk({
@@ -236,8 +275,8 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
-      // 1750rb infaq + 50rb donasi = 1800 ribu
-      expect(text).toContain('1. M99/10 1800 ribu ✅');
+      // 1750rb infaq + 50rb donasi = 1.8 juta
+      expect(text).toContain('1. M99/10 1.8 juta ✅');
       // Hanya 1 entry, bukan 2
       expect(text).not.toMatch(/2\. M99\/10/);
     });
@@ -315,7 +354,7 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
-      expect(text).toContain('1. M99/1 1750 ribu ✅');
+      expect(text).toContain('1. M99/1 1.75 juta ✅');
       expect(text).toContain('2. M99/02 500 ribu ✅');
     });
   });
@@ -336,7 +375,7 @@ describe('RekapService', () => {
 
       const text = await service.getDonasiRekap();
 
-      expect(text).toContain('1. Cash Donor 1750 ribu ✅');
+      expect(text).toContain('1. Cash Donor 1.75 juta ✅');
       expect(text).not.toContain('Potongan Donor');
     });
 
@@ -606,6 +645,8 @@ describe('RekapService', () => {
       ['Margata - MGT 5/17', 'M5/17'], // Margata - MGT prefix
       ['Margata 5/9', 'M5/9'], // Margata X/Y form (no "no" keyword)
       ['Nahara - NHT 6/5', 'NHT 6/5'], // does NOT become "NHT NHT 6/5"
+      ['Nahara - NHT8-16', 'NHT 8/16'], // dash separator → slash
+      ['Nahara - 8-16', 'NHT 8/16'], // no NHT prefix, dash → slash
       ['Uenos 5 / 57', 'U5/57'], // spaces around slash
     ])('renders %j as "Pengguna %s"', async (addr, expected) => {
       pengkurbanRepo.find.mockResolvedValue([
