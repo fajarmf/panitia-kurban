@@ -54,14 +54,14 @@ describe('parseTimestamp', () => {
   it('parses standard Google Forms timestamp (YYYY-MM-DD HH:MM:SS)', () => {
     const result = parseTimestamp('2026-05-19 14:23:45');
     expect(result instanceof Date).toBe(true);
-    expect(result.getFullYear()).toBe(2026);
-    expect(result.getMonth()).toBe(4); // May (0-indexed)
-    expect(result.getDate()).toBe(19);
+    expect(result.getUTCFullYear()).toBe(2026);
+    expect(result.getUTCMonth()).toBe(4); // May (0-indexed)
+    expect(result.getUTCDate()).toBe(19);
   });
 
   it('parses slash-separated format', () => {
     const result = parseTimestamp('2026/05/19 14:23:45');
-    expect(result.getFullYear()).toBe(2026);
+    expect(result.getUTCFullYear()).toBe(2026);
   });
 
   it('throws on empty input', () => {
@@ -71,5 +71,10 @@ describe('parseTimestamp', () => {
 
   it('throws on unparseable string', () => {
     expect(() => parseTimestamp('not-a-date')).toThrow(/invalid/i);
+  });
+
+  it('pins WIB offset: 14:23:45 WIB = 07:23:45 UTC', () => {
+    const result = parseTimestamp('2026-05-19 14:23:45');
+    expect(result.toISOString()).toBe('2026-05-19T07:23:45.000Z');
   });
 });

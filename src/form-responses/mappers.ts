@@ -19,9 +19,20 @@ export function rowToData(
   return data;
 }
 
+// WIB = +07:00 (form submitter timezone; Google Forms reports timestamps in spreadsheet locale without offset)
+const WIB_OFFSET = '+07:00';
+
 export function parseTimestamp(value: string | undefined | null): Date {
   if (!value) throw new Error('Timestamp value is empty');
-  const date = new Date(value);
+
+  // Google Forms format variants: "YYYY-MM-DD HH:MM:SS" or "YYYY/MM/DD HH:MM:SS"
+  // Normalize to ISO with WIB offset for consistent parsing across server TZ.
+  const normalized = value.trim()
+    .replace(/\//g, '-')       // slashes → dashes
+    .replace(' ', 'T')         // space → T (ISO separator)
+    + (value.includes('+') || value.includes('Z') ? '' : WIB_OFFSET);
+
+  const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) {
     throw new Error(`Invalid timestamp: ${value}`);
   }
