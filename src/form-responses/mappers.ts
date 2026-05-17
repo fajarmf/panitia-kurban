@@ -18,3 +18,12 @@ export function rowToData(
   }
   return data;
 }
+
+export function parseTimestamp(value: string | undefined | null): Date {
+  if (!value) throw new Error('Timestamp value is empty');
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid timestamp: ${value}`);
+  }
+  return date;
+}

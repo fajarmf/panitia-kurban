@@ -1,4 +1,4 @@
-import { parseReg, rowToData } from './mappers';
+import { parseReg, rowToData, parseTimestamp } from './mappers';
 
 describe('parseReg', () => {
   it('extracts REG-XXXX-YYYY from name string', () => {
@@ -47,5 +47,29 @@ describe('rowToData', () => {
     const headers = ['A', '', 'C'];
     const row = ['x', 'y', 'z'];
     expect(rowToData(headers, row)).toEqual({ A: 'x', C: 'z' });
+  });
+});
+
+describe('parseTimestamp', () => {
+  it('parses standard Google Forms timestamp (YYYY-MM-DD HH:MM:SS)', () => {
+    const result = parseTimestamp('2026-05-19 14:23:45');
+    expect(result instanceof Date).toBe(true);
+    expect(result.getFullYear()).toBe(2026);
+    expect(result.getMonth()).toBe(4); // May (0-indexed)
+    expect(result.getDate()).toBe(19);
+  });
+
+  it('parses slash-separated format', () => {
+    const result = parseTimestamp('2026/05/19 14:23:45');
+    expect(result.getFullYear()).toBe(2026);
+  });
+
+  it('throws on empty input', () => {
+    expect(() => parseTimestamp('')).toThrow(/empty|invalid/i);
+    expect(() => parseTimestamp(undefined)).toThrow(/empty|invalid/i);
+  });
+
+  it('throws on unparseable string', () => {
+    expect(() => parseTimestamp('not-a-date')).toThrow(/invalid/i);
   });
 });
