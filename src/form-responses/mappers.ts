@@ -38,3 +38,15 @@ export function parseTimestamp(value: string | undefined | null): Date {
   }
   return date;
 }
+
+export function buildPrefillUrl(namaWithReg: string): string {
+  const base = process.env.KONFIRMASI_TEKNIS_FORM_PREFILL_BASE;
+  const entryId = process.env.KONFIRMASI_TEKNIS_NAMA_ENTRY_ID;
+  if (!base || !entryId) {
+    throw new Error(
+      'Missing env: KONFIRMASI_TEKNIS_FORM_PREFILL_BASE and/or KONFIRMASI_TEKNIS_NAMA_ENTRY_ID',
+    );
+  }
+  const encoded = encodeURIComponent(namaWithReg);
+  return `${base}?usp=pp_url&entry.${entryId}=${encoded}`;
+}

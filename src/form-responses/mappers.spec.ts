@@ -1,4 +1,4 @@
-import { parseReg, rowToData, parseTimestamp } from './mappers';
+import { parseReg, rowToData, parseTimestamp, buildPrefillUrl } from './mappers';
 
 describe('parseReg', () => {
   it('extracts REG-XXXX-YYYY from name string', () => {
@@ -76,5 +76,40 @@ describe('parseTimestamp', () => {
   it('pins WIB offset: 14:23:45 WIB = 07:23:45 UTC', () => {
     const result = parseTimestamp('2026-05-19 14:23:45');
     expect(result.toISOString()).toBe('2026-05-19T07:23:45.000Z');
+  });
+});
+
+describe('buildPrefillUrl', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env.KONFIRMASI_TEKNIS_FORM_PREFILL_BASE =
+      'https://docs.google.com/forms/d/e/EXAMPLE_FORM/viewform';
+    process.env.KONFIRMASI_TEKNIS_NAMA_ENTRY_ID = '123456';
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it('builds URL with encoded nama parameter', () => {
+    const url = buildPrefillUrl('Sohibul Test (REG-2026-0001)');
+    expect(url).toContain('https://docs.google.com/forms/d/e/EXAMPLE_FORM/viewform');
+    expect(url).toContain('usp=pp_url');
+    expect(url).toContain('entry.123456=');
+    expect(url).toContain('Sohibul');
+    expect(url).toContain('REG-2026-0001');
+  });
+
+  it('encodes special characters in nama', () => {
+    const url = buildPrefillUrl('Sohibul Test — Kambing #1 (REG-2026-0001)');
+    expect(decodeURIComponent(url.split('=').pop()!)).toBe(
+      'Sohibul Test — Kambing #1 (REG-2026-0001)',
+    );
+  });
+
+  it('throws when env vars missing', () => {
+    delete process.env.KONFIRMASI_TEKNIS_FORM_PREFILL_BASE;
+    expect(() => buildPrefillUrl('x')).toThrow(/env/i);
   });
 });
