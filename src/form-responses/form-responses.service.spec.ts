@@ -19,9 +19,7 @@ describe('FormResponsesService.syncFromSheet', () => {
   beforeEach(async () => {
     const sheetsMock = { readRange: jest.fn() };
     const formRepoMock = {
-      findOne: jest.fn(),
-      insert: jest.fn(),
-      update: jest.fn(),
+      upsert: jest.fn(),
     };
     const pengkurbanRepoMock = { findOne: jest.fn() };
 
@@ -44,20 +42,18 @@ describe('FormResponsesService.syncFromSheet', () => {
     >;
   });
 
-  it('inserts new row when pengkurban exists and no prior response', async () => {
+  it('upserts row when pengkurban exists', async () => {
     sheets.readRange.mockResolvedValue([
       ['Timestamp', 'Nama Sohibul Qurban', 'Pilihan'],
       ['2026-05-19 14:23:45', 'Sohibul Test (REG-2026-0001)', '1/3 (sepertiga)'],
     ]);
     pengkurbanRepo.findOne.mockResolvedValue({ id: 'uuid-1' } as Pengkurban);
-    formRepo.findOne.mockResolvedValue(null);
-    formRepo.insert.mockResolvedValue({} as any);
+    formRepo.upsert.mockResolvedValue({} as any);
 
     const summary = await service.syncFromSheet(formKey, sheetId, range);
 
-    expect(summary.inserted).toBe(1);
-    expect(summary.updated).toBe(0);
-    expect(formRepo.insert).toHaveBeenCalledWith(
+    expect(summary.synced).toBe(1);
+    expect(formRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         pengkurbanId: 'uuid-1',
         formKey: formKey,
@@ -67,23 +63,8 @@ describe('FormResponsesService.syncFromSheet', () => {
           Pilihan: '1/3 (sepertiga)',
         }),
       }),
+      { conflictPaths: ['pengkurbanId', 'formKey'] },
     );
-  });
-
-  it('updates existing row when prior response exists', async () => {
-    sheets.readRange.mockResolvedValue([
-      ['Timestamp', 'Nama Sohibul Qurban'],
-      ['2026-05-19 14:23:45', 'Sohibul Test (REG-2026-0001)'],
-    ]);
-    pengkurbanRepo.findOne.mockResolvedValue({ id: 'uuid-1' } as Pengkurban);
-    formRepo.findOne.mockResolvedValue({ id: 'existing-uuid' } as FormResponse);
-    formRepo.update.mockResolvedValue({} as any);
-
-    const summary = await service.syncFromSheet(formKey, sheetId, range);
-
-    expect(summary.updated).toBe(1);
-    expect(summary.inserted).toBe(0);
-    expect(formRepo.update).toHaveBeenCalledWith('existing-uuid', expect.any(Object));
   });
 
   it('skips row when no REG in Nama Sohibul Qurban', async () => {
@@ -120,7 +101,7 @@ describe('FormResponsesService.syncFromSheet', () => {
 
     const summary = await service.syncFromSheet(formKey, sheetId, range);
 
-    expect(summary).toEqual({ inserted: 0, updated: 0, skipped: [], errors: [] });
+    expect(summary).toEqual({ synced: 0, skipped: [], errors: [] });
   });
 
   it('records error per row when mapping throws (e.g., invalid timestamp)', async () => {
@@ -134,6 +115,6 @@ describe('FormResponsesService.syncFromSheet', () => {
 
     expect(summary.errors).toHaveLength(1);
     expect(summary.errors[0].error).toMatch(/invalid/i);
-    expect(summary.inserted).toBe(0);
+    expect(summary.synced).toBe(0);
   });
 });

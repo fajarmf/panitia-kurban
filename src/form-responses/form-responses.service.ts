@@ -7,8 +7,7 @@ import { SheetsClient } from './sheets-client';
 import { parseReg, rowToData, parseTimestamp } from './mappers';
 
 export interface SyncSummary {
-  inserted: number;
-  updated: number;
+  synced: number;
   skipped: Array<{ row?: string[]; reg?: string; reason: string }>;
   errors: Array<{ row: string[]; error: string }>;
 }
@@ -31,8 +30,7 @@ export class FormResponsesService {
     range: string,
   ): Promise<SyncSummary> {
     const summary: SyncSummary = {
-      inserted: 0,
-      updated: 0,
+      synced: 0,
       skipped: [],
       errors: [],
     };
@@ -72,17 +70,10 @@ export class FormResponsesService {
           formSubmittedAt,
         };
 
-        const existing = await this.formRepo.findOne({
-          where: { pengkurbanId: pengkurban.id, formKey },
+        await this.formRepo.upsert(payload, {
+          conflictPaths: ['pengkurbanId', 'formKey'],
         });
-
-        if (existing) {
-          await this.formRepo.update(existing.id, payload);
-          summary.updated++;
-        } else {
-          await this.formRepo.insert(payload);
-          summary.inserted++;
-        }
+        summary.synced++;
       } catch (e) {
         const err = e as Error;
         console.error('[form-responses sync]', err.stack || err.message);
@@ -91,7 +82,7 @@ export class FormResponsesService {
     }
 
     this.logger.log(
-      `Sync ${formKey}: inserted=${summary.inserted} updated=${summary.updated} skipped=${summary.skipped.length} errors=${summary.errors.length}`,
+      `Sync ${formKey}: synced=${summary.synced} skipped=${summary.skipped.length} errors=${summary.errors.length}`,
     );
     return summary;
   }
