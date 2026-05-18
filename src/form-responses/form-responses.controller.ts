@@ -5,6 +5,8 @@ import {
   Query,
   UseGuards,
   BadRequestException,
+  NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -55,7 +57,7 @@ export class FormResponsesController {
       where: { id: pengkurbanId },
     });
     if (!pengkurban) {
-      throw new BadRequestException('pengkurban not found');
+      throw new NotFoundException('Pengkurban tidak ditemukan');
     }
 
     let prefillUrl: string | null = null;
@@ -63,7 +65,9 @@ export class FormResponsesController {
       try {
         const namaWithReg = `${pengkurban.name} (${pengkurban.registrationNumber})`;
         prefillUrl = buildPrefillUrl(namaWithReg);
-      } catch {
+      } catch (e) {
+        const err = e as Error;
+        console.error('[form-responses prefill]', err.stack || err.message);
         prefillUrl = null;
       }
     }
@@ -79,8 +83,13 @@ export class FormResponsesController {
     if (formKey !== process.env.KONFIRMASI_TEKNIS_FORM_KEY) {
       throw new BadRequestException('unknown form_key');
     }
-    const sheetId = process.env.KONFIRMASI_TEKNIS_SHEET_ID!;
-    const range = process.env.KONFIRMASI_TEKNIS_RANGE!;
+    const sheetId = process.env.KONFIRMASI_TEKNIS_SHEET_ID;
+    const range = process.env.KONFIRMASI_TEKNIS_RANGE;
+    if (!sheetId || !range) {
+      throw new ServiceUnavailableException(
+        'Form ingestion not configured: KONFIRMASI_TEKNIS_SHEET_ID or KONFIRMASI_TEKNIS_RANGE missing',
+      );
+    }
     return this.service.syncFromSheet(formKey, sheetId, range);
   }
 }
