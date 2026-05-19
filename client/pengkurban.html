@@ -60,11 +60,12 @@
               <th>Bukti</th>
               <th>Status</th>
               <th>Infaq</th>
+              <th>Konfirmasi</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="data-table">
-            <tr><td colspan="10" class="text-center py-8"><div class="spinner"></div></td></tr>
+            <tr><td colspan="11" class="text-center py-8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -301,6 +302,9 @@
           <span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>
           ${infaqBadge}
         </div></td>
+        ${d.konfirmasi_teknis_submitted_at
+          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><span class="text-green-400">✓</span></td>`
+          : `<td class="text-center text-white/30">—</td>`}
         <td><div class="flex gap-2 flex-wrap">
           ${verifyBtn}
           ${infaqBtn}
@@ -312,7 +316,7 @@
 
     function renderGroupHeader(label, count) {
       return `<tr class="bg-emerald-900/40">
-        <td colspan="10" class="font-semibold text-emerald-200 py-2 px-3">
+        <td colspan="11" class="font-semibold text-emerald-200 py-2 px-3">
           ${label}
           <span class="text-emerald-400/60 text-xs ml-2">(${count} orang)</span>
         </td>
@@ -330,7 +334,7 @@
 
         const tbody = document.getElementById('data-table');
         if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
           return;
         }
 
