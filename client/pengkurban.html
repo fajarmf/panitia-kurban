@@ -319,8 +319,8 @@
           ${infaqBadge}
         </div></td>
         ${d.konfirmasi_teknis_submitted_at
-          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><button class="text-green-400 hover:text-green-300 cursor-pointer" onclick="openKonfirmasiModal('${d.id}', '${escHtml(d.name)}')">✓</button></td>`
-          : `<td class="text-center"><button class="text-white/30 hover:text-yellow-400/70 cursor-pointer text-xs" onclick="openKonfirmasiModal('${d.id}', '${escHtml(d.name)}')">—</button></td>`}
+          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><button class="text-green-400 hover:text-green-300 cursor-pointer" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>✓</button></td>`
+          : `<td class="text-center"><button class="text-white/30 hover:text-yellow-400/70 cursor-pointer text-xs" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>—</button></td>`}
         <td><div class="flex gap-2 flex-wrap">
           ${verifyBtn}
           ${infaqBtn}
@@ -561,7 +561,7 @@
           `;
         } else {
           const prefillBtn = result.prefill_url
-            ? `<button onclick="navigator.clipboard.writeText('${escHtml(result.prefill_url)}'); this.textContent='✓ Tersalin'" class="mt-2 btn-secondary btn-sm">Salin pre-filled link</button>`
+            ? `<button onclick='navigator.clipboard.writeText(${escHtml(JSON.stringify(result.prefill_url))}); this.textContent="✓ Tersalin"' class="mt-2 btn-secondary btn-sm">Salin pre-filled link</button>`
             : '';
           container.innerHTML = `
             <p class="text-yellow-300/70">⚠ Belum mengisi form konfirmasi teknis</p>
