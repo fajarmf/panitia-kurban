@@ -685,7 +685,7 @@
       const cluster = document.getElementById('field-cluster').value;
       const street = document.getElementById('field-street').value.trim();
       const address = [cluster, street].filter(Boolean).join(' - ');
-      const phone = document.getElementById('field-phone').value.trim();
+      const phone = document.getElementById('field-phone').value.trim().replace(/[^\d+]/g, '');
       const proofFiles = Array.from(document.getElementById('field-proof').files);
 
       if (!selectedMode) return showError('Pilih jenis pendaftaran terlebih dahulu.');
