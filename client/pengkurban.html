@@ -123,6 +123,22 @@
     </div>
   </div>
 
+  <!-- Konfirmasi Teknis detail modal -->
+  <div class="modal-overlay" id="konfirmasi-modal">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3 id="konfirmasi-modal-title">Konfirmasi Teknis</h3>
+        <button class="modal-close" onclick="closeKonfirmasiModal()">✕</button>
+      </div>
+      <div id="konfirmasiTeknisContent" class="text-sm py-2">
+        <p class="text-white/40">Loading...</p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button type="button" class="btn-secondary flex-1" onclick="closeKonfirmasiModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Verify modal -->
   <div class="modal-overlay" id="verify-modal">
     <div class="modal-content">
@@ -303,8 +319,8 @@
           ${infaqBadge}
         </div></td>
         ${d.konfirmasi_teknis_submitted_at
-          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><span class="text-green-400">✓</span></td>`
-          : `<td class="text-center text-white/30">—</td>`}
+          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><button class="text-green-400 hover:text-green-300 cursor-pointer" onclick="openKonfirmasiModal('${d.id}', '${escHtml(d.name)}')">✓</button></td>`
+          : `<td class="text-center"><button class="text-white/30 hover:text-yellow-400/70 cursor-pointer text-xs" onclick="openKonfirmasiModal('${d.id}', '${escHtml(d.name)}')">—</button></td>`}
         <td><div class="flex gap-2 flex-wrap">
           ${verifyBtn}
           ${infaqBtn}
@@ -503,6 +519,59 @@
         closeVerifyModal();
         loadData();
       } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    const KONFIRMASI_FORM_KEY = 'konfirmasi_teknis_1447h';
+    const KONFIRMASI_SKIP_KEYS = new Set(['Timestamp', 'Nama Sohibul Qurban']);
+
+    function openKonfirmasiModal(pengkurbanId, name) {
+      document.getElementById('konfirmasi-modal-title').textContent = `Konfirmasi Teknis — ${name}`;
+      document.getElementById('konfirmasiTeknisContent').innerHTML = '<p class="text-white/40">Loading...</p>';
+      document.getElementById('konfirmasi-modal').classList.add('active');
+      loadKonfirmasiTeknis(pengkurbanId);
+    }
+
+    function closeKonfirmasiModal() {
+      document.getElementById('konfirmasi-modal').classList.remove('active');
+    }
+
+    async function loadKonfirmasiTeknis(pengkurbanId) {
+      const container = document.getElementById('konfirmasiTeknisContent');
+      try {
+        const res = await fetch(
+          `/api/form-responses?pengkurban_id=${encodeURIComponent(pengkurbanId)}&form_key=${KONFIRMASI_FORM_KEY}`,
+          { headers: { 'Authorization': `Bearer ${getToken()}` } }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+
+        if (result.submitted) {
+          const rows = Object.entries(result.data)
+            .filter(([k]) => !KONFIRMASI_SKIP_KEYS.has(k))
+            .map(([k, v]) => `
+              <div class="mb-3">
+                <div class="text-white/50 text-xs mb-0.5">${escHtml(k)}</div>
+                <div class="text-white/90">${escHtml(v || '(kosong)')}</div>
+              </div>
+            `).join('');
+          const submittedAt = new Date(result.form_submitted_at).toLocaleString('id-ID');
+          container.innerHTML = `
+            <p class="text-xs text-white/40 mb-4">Submitted: ${escHtml(submittedAt)}</p>
+            ${rows}
+          `;
+        } else {
+          const prefillBtn = result.prefill_url
+            ? `<button onclick="navigator.clipboard.writeText('${escHtml(result.prefill_url)}'); this.textContent='✓ Tersalin'" class="mt-2 btn-secondary btn-sm">Salin pre-filled link</button>`
+            : '';
+          container.innerHTML = `
+            <p class="text-yellow-300/70">⚠ Belum mengisi form konfirmasi teknis</p>
+            ${prefillBtn}
+          `;
+        }
+      } catch (e) {
+        console.error('[konfirmasi-teknis]', e.stack || e.message);
+        container.innerHTML = `<p class="text-red-400">Error: ${escHtml(e.message)}</p>`;
+      }
     }
   </script>
 </body>
