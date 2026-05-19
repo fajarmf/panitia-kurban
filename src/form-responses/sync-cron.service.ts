@@ -10,6 +10,12 @@ export class SyncCronService {
 
   @Cron(CronExpression.EVERY_10_MINUTES)
   async syncKonfirmasiTeknis() {
+    // PM2 cluster mode: only worker 0 runs cron to avoid duplicate Sheets reads.
+    // NODE_APP_INSTANCE is set by PM2 per worker (0..N-1). Unset = single-instance, run normally.
+    if (process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE !== '0') {
+      return;
+    }
+
     const formKey = process.env.KONFIRMASI_TEKNIS_FORM_KEY;
     const sheetId = process.env.KONFIRMASI_TEKNIS_SHEET_ID;
     const range = process.env.KONFIRMASI_TEKNIS_RANGE;
