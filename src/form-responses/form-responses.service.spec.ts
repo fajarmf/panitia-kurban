@@ -96,6 +96,24 @@ describe('FormResponsesService.syncFromSheet', () => {
     });
   });
 
+  it('finds REG even if Nama column is renamed (scan-all-cells)', async () => {
+    // Form admin may rename 'Nama Sohibul Qurban' → 'Data Sohibul Qurban' (or anything else);
+    // service should still find REG-XXXX-YYYY by scanning all cells.
+    sheets.readRange.mockResolvedValue([
+      ['Timestamp', 'Data Sohibul Qurban', 'WA'],
+      ['5/17/2026 2:04:04', 'Sohibul Test (REG-2026-0001)', '0812-3456-7890'],
+    ]);
+    pengkurbanRepo.findOne.mockResolvedValue({ id: 'uuid-1' } as Pengkurban);
+    formRepo.upsert.mockResolvedValue({} as any);
+
+    const summary = await service.syncFromSheet(formKey, sheetId, range);
+
+    expect(summary.synced).toBe(1);
+    expect(pengkurbanRepo.findOne).toHaveBeenCalledWith({
+      where: { registrationNumber: 'REG-2026-0001' },
+    });
+  });
+
   it('returns empty summary when sheet only has header row', async () => {
     sheets.readRange.mockResolvedValue([['Timestamp', 'Nama Sohibul Qurban']]);
 

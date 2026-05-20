@@ -46,11 +46,22 @@ export class FormResponsesService {
     for (const row of responseRows) {
       try {
         const data = rowToData(headers, row);
-        const namaCell = data['Nama Sohibul Qurban'];
-        const reg = parseReg(namaCell);
+
+        // Find REG-XXXX-YYYY in any cell. Form admin (Pak Haris) may rename
+        // the nama column ("Nama Sohibul Qurban" → "Data Sohibul Qurban", etc.),
+        // so scan-all-cells is more robust than a hardcoded header lookup.
+        let reg: string | null = null;
+        for (const [headerName, value] of Object.entries(data)) {
+          if (headerName === 'Timestamp') continue;
+          const found = parseReg(value);
+          if (found) {
+            reg = found;
+            break;
+          }
+        }
 
         if (!reg) {
-          summary.skipped.push({ row, reason: 'no REG in Nama' });
+          summary.skipped.push({ row, reason: 'no REG found in any cell' });
           continue;
         }
 

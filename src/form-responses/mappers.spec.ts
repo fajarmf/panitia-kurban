@@ -64,6 +64,19 @@ describe('parseTimestamp', () => {
     expect(result.getUTCFullYear()).toBe(2026);
   });
 
+  it('parses Google Sheets US-locale format M/D/YYYY H:MM:SS as WIB', () => {
+    // Google Sheets default display format for many spreadsheets
+    const result = parseTimestamp('5/17/2026 2:04:04');
+    // 02:04:04 WIB = 2026-05-16T19:04:04Z (UTC)
+    expect(result.toISOString()).toBe('2026-05-16T19:04:04.000Z');
+  });
+
+  it('parses US-locale with double-digit fields', () => {
+    const result = parseTimestamp('12/31/2026 14:23:45');
+    // 14:23:45 WIB = 2026-12-31T07:23:45Z (UTC)
+    expect(result.toISOString()).toBe('2026-12-31T07:23:45.000Z');
+  });
+
   it('throws on empty input', () => {
     expect(() => parseTimestamp('')).toThrow(/empty|invalid/i);
     expect(() => parseTimestamp(undefined)).toThrow(/empty|invalid/i);
