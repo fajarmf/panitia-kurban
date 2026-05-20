@@ -61,7 +61,10 @@ export class PengkurbanService {
   }
 
   async exportCsv(eventId?: string): Promise<string> {
-    const data = await this.findAll(eventId);
+    const all = await this.findAll(eventId);
+    // Bendahara only wants active records — exclude REJECTED from CSV
+    // (admin list view still shows them with red badge).
+    const data = all.filter((d) => d.status !== RegistrationStatus.REJECTED);
     const header = [
       'No. Registrasi',
       'Nama Pendaftar',
