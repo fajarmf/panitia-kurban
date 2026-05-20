@@ -69,11 +69,11 @@ function getColumnPrefs(page, defaults) {
   const stored = prefs.columns && prefs.columns[page];
   if (!Array.isArray(stored) || stored.length === 0) return defaults;
   // Defensive: drop unknown columns (defaults may have shrunk).
+  // Note: NOT merging with defaults — stored is the source of truth for
+  // what user wants visible. Merging would re-add columns user explicitly hid.
+  // New columns added later can be surfaced via "Reset default".
   const known = stored.filter(id => defaults.includes(id));
-  if (known.length === 0) return defaults;
-  // Forward-compat: defaults punya kolom baru yang belum di-track -> jadi visible.
-  const newOnes = defaults.filter(id => !known.includes(id));
-  return [...known, ...newOnes];
+  return known.length > 0 ? known : defaults;
 }
 
 function setColumnPrefs(page, visibleIds) {
