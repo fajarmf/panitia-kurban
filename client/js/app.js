@@ -42,9 +42,9 @@ function _prefsKey() {
 }
 
 function getPrefs() {
-  const key = _prefsKey();
-  if (!key) return {};
   try {
+    const key = _prefsKey();
+    if (!key) return {};
     return JSON.parse(localStorage.getItem(key)) || {};
   } catch (e) {
     console.error('[prefs] parse failed', e.message);
@@ -53,11 +53,15 @@ function getPrefs() {
 }
 
 function setPrefs(patch) {
-  const key = _prefsKey();
-  if (!key) return;
-  const current = getPrefs();
-  const next = { ...current, ...patch };
-  localStorage.setItem(key, JSON.stringify(next));
+  try {
+    const key = _prefsKey();
+    if (!key) return;
+    const current = getPrefs();
+    const next = { ...current, ...patch };
+    localStorage.setItem(key, JSON.stringify(next));
+  } catch (e) {
+    console.error('[prefs] write failed', e.message);
+  }
 }
 
 function getColumnPrefs(page, defaults) {
