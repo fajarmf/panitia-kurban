@@ -35,6 +35,48 @@ function clearAuth() {
   localStorage.removeItem('user');
 }
 
+// ===== User preferences (localStorage) =====
+function _prefsKey() {
+  const user = getUser();
+  return user ? `prefs:${user.id}` : null;
+}
+
+function getPrefs() {
+  const key = _prefsKey();
+  if (!key) return {};
+  try {
+    return JSON.parse(localStorage.getItem(key)) || {};
+  } catch (e) {
+    console.error('[prefs] parse failed', e.message);
+    return {};
+  }
+}
+
+function setPrefs(patch) {
+  const key = _prefsKey();
+  if (!key) return;
+  const current = getPrefs();
+  const next = { ...current, ...patch };
+  localStorage.setItem(key, JSON.stringify(next));
+}
+
+function getColumnPrefs(page, defaults) {
+  const prefs = getPrefs();
+  const stored = prefs.columns && prefs.columns[page];
+  if (!Array.isArray(stored) || stored.length === 0) return defaults;
+  // Defensive: drop unknown columns (defaults may have shrunk).
+  const known = stored.filter(id => defaults.includes(id));
+  if (known.length === 0) return defaults;
+  // Forward-compat: defaults punya kolom baru yang belum di-track -> jadi visible.
+  const newOnes = defaults.filter(id => !known.includes(id));
+  return [...known, ...newOnes];
+}
+
+function setColumnPrefs(page, visibleIds) {
+  const prefs = getPrefs();
+  setPrefs({ columns: { ...(prefs.columns || {}), [page]: visibleIds } });
+}
+
 function requireAuth() {
   if (!getToken()) {
     window.location.href = '/login.html';
