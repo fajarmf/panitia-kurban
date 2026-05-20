@@ -60,11 +60,12 @@
               <th>Bukti</th>
               <th>Status</th>
               <th>Infaq</th>
+              <th>Konfirmasi</th>
               <th>Aksi</th>
             </tr>
           </thead>
           <tbody id="data-table">
-            <tr><td colspan="10" class="text-center py-8"><div class="spinner"></div></td></tr>
+            <tr><td colspan="11" class="text-center py-8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -118,6 +119,22 @@
       <div class="flex gap-3 mt-4">
         <button type="button" class="btn-secondary flex-1" onclick="closeRekapModal()">Tutup</button>
         <button type="button" class="btn-primary flex-1" onclick="salinRekap(this)">📋 Salin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Konfirmasi Teknis detail modal -->
+  <div class="modal-overlay" id="konfirmasi-modal">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3 id="konfirmasi-modal-title">Konfirmasi Teknis</h3>
+        <button class="modal-close" onclick="closeKonfirmasiModal()">✕</button>
+      </div>
+      <div id="konfirmasiTeknisContent" class="text-sm py-2">
+        <p class="text-white/40">Loading...</p>
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button type="button" class="btn-secondary flex-1" onclick="closeKonfirmasiModal()">Tutup</button>
       </div>
     </div>
   </div>
@@ -301,6 +318,9 @@
           <span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>
           ${infaqBadge}
         </div></td>
+        ${d.konfirmasi_teknis_submitted_at
+          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><button class="text-green-400 hover:text-green-300 cursor-pointer" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>✓</button></td>`
+          : `<td class="text-center"><button class="text-white/30 hover:text-yellow-400/70 cursor-pointer text-xs" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>—</button></td>`}
         <td><div class="flex gap-2 flex-wrap">
           ${verifyBtn}
           ${infaqBtn}
@@ -312,7 +332,7 @@
 
     function renderGroupHeader(label, count) {
       return `<tr class="bg-emerald-900/40">
-        <td colspan="10" class="font-semibold text-emerald-200 py-2 px-3">
+        <td colspan="11" class="font-semibold text-emerald-200 py-2 px-3">
           ${label}
           <span class="text-emerald-400/60 text-xs ml-2">(${count} orang)</span>
         </td>
@@ -330,7 +350,7 @@
 
         const tbody = document.getElementById('data-table');
         if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="10" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
           return;
         }
 
@@ -499,6 +519,66 @@
         closeVerifyModal();
         loadData();
       } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    const KONFIRMASI_FORM_KEY = 'konfirmasi_teknis_1447h';
+    const KONFIRMASI_SKIP_KEYS = new Set(['Timestamp']);
+    const KONFIRMASI_STRAY_KEY_RE = /^Column \d+$/;       // stray Google sheet placeholders
+    const KONFIRMASI_REG_VALUE_RE = /REG-\d{4}-\d{4}/;    // nama dropdown value (already in modal title)
+
+    function openKonfirmasiModal(pengkurbanId, name) {
+      document.getElementById('konfirmasi-modal-title').textContent = `Konfirmasi Teknis — ${name}`;
+      document.getElementById('konfirmasiTeknisContent').innerHTML = '<p class="text-white/40">Loading...</p>';
+      document.getElementById('konfirmasi-modal').classList.add('active');
+      loadKonfirmasiTeknis(pengkurbanId);
+    }
+
+    function closeKonfirmasiModal() {
+      document.getElementById('konfirmasi-modal').classList.remove('active');
+    }
+
+    async function loadKonfirmasiTeknis(pengkurbanId) {
+      const container = document.getElementById('konfirmasiTeknisContent');
+      try {
+        const res = await fetch(
+          `/api/form-responses?pengkurban_id=${encodeURIComponent(pengkurbanId)}&form_key=${KONFIRMASI_FORM_KEY}`,
+          { headers: { 'Authorization': `Bearer ${getToken()}` } }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const result = await res.json();
+
+        if (result.submitted) {
+          const rows = Object.entries(result.data)
+            .filter(([k, v]) => {
+              if (KONFIRMASI_SKIP_KEYS.has(k)) return false;
+              if (KONFIRMASI_STRAY_KEY_RE.test(k)) return false;
+              if (KONFIRMASI_REG_VALUE_RE.test(v)) return false;
+              return true;
+            })
+            .map(([k, v]) => `
+              <div class="mb-3">
+                <div class="text-white/50 text-xs mb-0.5">${escHtml(k)}</div>
+                <div class="text-white/90">${escHtml(v || '(kosong)')}</div>
+              </div>
+            `).join('');
+          const submittedAt = new Date(result.form_submitted_at).toLocaleString('id-ID');
+          container.innerHTML = `
+            <p class="text-xs text-white/40 mb-4">Submitted: ${escHtml(submittedAt)}</p>
+            ${rows}
+          `;
+        } else {
+          const prefillBtn = result.prefill_url
+            ? `<button onclick='navigator.clipboard.writeText(${escHtml(JSON.stringify(result.prefill_url))}); this.textContent="✓ Tersalin"' class="mt-2 btn-secondary btn-sm">Salin pre-filled link</button>`
+            : '';
+          container.innerHTML = `
+            <p class="text-yellow-300/70">⚠ Belum mengisi form konfirmasi teknis</p>
+            ${prefillBtn}
+          `;
+        }
+      } catch (e) {
+        console.error('[konfirmasi-teknis]', e.stack || e.message);
+        container.innerHTML = `<p class="text-red-400">Error: ${escHtml(e.message)}</p>`;
+      }
     }
   </script>
 </body>
