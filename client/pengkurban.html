@@ -29,7 +29,7 @@
       <div class="flex gap-2 flex-wrap">
         <select id="event-filter" class="input-field" style="max-width:280px" onchange="loadData()"></select>
         <select id="status-filter" class="input-field" style="max-width:220px" onchange="loadData()">
-          <option value="">Semua Status</option>
+          <option value="">Semua Status (selain Ditolak)</option>
           <option value="PENDING_PAYMENT">Menunggu Pembayaran</option>
           <option value="PENDING_VERIFICATION">Menunggu Verifikasi</option>
           <option value="CONFIRMED">Terkonfirmasi</option>
@@ -364,7 +364,11 @@
       if (eventId) params.set('eventId', eventId);
       try {
         let data = await api(`/pengkurban?${params}`);
-        if (status) data = data.filter(d => d.status === status);
+        if (status) {
+          data = data.filter(d => d.status === status);
+        } else {
+          data = data.filter(d => d.status !== 'REJECTED');
+        }
 
         const tbody = document.getElementById('data-table');
         if (!data.length) {
