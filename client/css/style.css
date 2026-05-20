@@ -493,6 +493,48 @@ select.input-field option {
   flex-shrink: 0;
 }
 
+/* Sidebar logo: anchor untuk toggle button */
+.sidebar-logo {
+  position: relative;
+}
+.sidebar-toggle {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #6ee7b7;
+}
+.sidebar-toggle svg { width: 16px; height: 16px; }
+
+/* Collapsed state (desktop) */
+.sidebar, .main-content { transition: width 0.2s ease, margin-left 0.2s ease; }
+.sidebar.collapsed { width: 64px; }
+.sidebar.collapsed .sidebar-logo { padding: 0 0 16px; min-height: 36px; }
+.sidebar.collapsed .sidebar-logo h1,
+.sidebar.collapsed .sidebar-logo p { display: none; }
+.sidebar.collapsed .sidebar-toggle { right: 50%; transform: translateX(50%); }
+.sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+.sidebar.collapsed .sidebar-nav a .nav-label { display: none; }
+.sidebar.collapsed .sidebar-nav a {
+  justify-content: center;
+  padding: 12px;
+  border-left-width: 0;
+}
+body.sidebar-collapsed .main-content { margin-left: 64px; }
+
 .main-content {
   margin-left: 260px;
   padding: 24px;
@@ -730,6 +772,18 @@ select.input-field option {
   .hide-mobile {
     display: none !important;
   }
+  /* Collapse no-op di mobile — sidebar tetap full width saat dibuka via hamburger */
+  .sidebar.collapsed { width: 260px; }
+  .sidebar.collapsed .sidebar-logo { padding: 0 24px 24px; min-height: auto; }
+  .sidebar.collapsed .sidebar-logo h1,
+  .sidebar.collapsed .sidebar-logo p { display: block; }
+  .sidebar.collapsed .sidebar-nav a .nav-label { display: inline; }
+  .sidebar.collapsed .sidebar-nav a {
+    justify-content: flex-start;
+    padding: 12px 24px;
+  }
+  .sidebar-toggle { display: none; }
+  body.sidebar-collapsed .main-content { margin-left: 0; }
 }
 
 /* Loading spinner */
