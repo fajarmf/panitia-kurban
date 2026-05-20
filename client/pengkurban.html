@@ -522,7 +522,9 @@
     }
 
     const KONFIRMASI_FORM_KEY = 'konfirmasi_teknis_1447h';
-    const KONFIRMASI_SKIP_KEYS = new Set(['Timestamp', 'Nama Sohibul Qurban']);
+    const KONFIRMASI_SKIP_KEYS = new Set(['Timestamp']);
+    const KONFIRMASI_STRAY_KEY_RE = /^Column \d+$/;       // stray Google sheet placeholders
+    const KONFIRMASI_REG_VALUE_RE = /REG-\d{4}-\d{4}/;    // nama dropdown value (already in modal title)
 
     function openKonfirmasiModal(pengkurbanId, name) {
       document.getElementById('konfirmasi-modal-title').textContent = `Konfirmasi Teknis — ${name}`;
@@ -547,7 +549,12 @@
 
         if (result.submitted) {
           const rows = Object.entries(result.data)
-            .filter(([k]) => !KONFIRMASI_SKIP_KEYS.has(k))
+            .filter(([k, v]) => {
+              if (KONFIRMASI_SKIP_KEYS.has(k)) return false;
+              if (KONFIRMASI_STRAY_KEY_RE.test(k)) return false;
+              if (KONFIRMASI_REG_VALUE_RE.test(v)) return false;
+              return true;
+            })
             .map(([k, v]) => `
               <div class="mb-3">
                 <div class="text-white/50 text-xs mb-0.5">${escHtml(k)}</div>
