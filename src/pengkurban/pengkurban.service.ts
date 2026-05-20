@@ -84,7 +84,10 @@ export class PengkurbanService {
       'Tahun',
     ].join(',');
     const rows = data.map((d) => {
-      const infaqAmount = getInfaqAmount(d.animalType);
+      // Waiver: infaq_amount IS NULL → di-skip dari obligation (mis. bawa
+      // sendiri + potongan daging). Source of truth column, bukan default
+      // catalog lookup.
+      const waived = d.infaqAmount === null || d.infaqAmount === undefined;
       return [
         d.registrationNumber,
         d.name,
@@ -94,8 +97,8 @@ export class PengkurbanService {
         d.animalSize || '',
         d.purchaseType,
         d.price != null ? String(d.price) : '',
-        String(infaqAmount),
-        d.infaqPaid ? 'Lunas' : 'Belum',
+        waived ? '' : String(d.infaqAmount),
+        waived ? 'Waived' : d.infaqPaid ? 'Lunas' : 'Belum',
         d.infaqPaidAt ? d.infaqPaidAt.toISOString() : '',
         d.status,
         d.phone || '',

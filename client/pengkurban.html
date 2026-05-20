@@ -199,7 +199,12 @@
     function computeExpectedTotal(row) {
       if (!PRICING) return '(loading...)';
       const at = row.animalType;
-      const infaq = getInfaq(at);
+      // infaq_amount IS NULL → waiver (no infaq added to total). Override
+      // amount (number) wins over catalog default.
+      const waived = row.infaqAmount === null;
+      const infaq = waived
+        ? 0
+        : (row.infaqAmount != null ? Number(row.infaqAmount) : getInfaq(at));
       const fmt = (n) => n.toLocaleString('id-ID');
 
       if (at === 'SAPI_KOLEKTIF_A') {
@@ -293,11 +298,24 @@
         ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${escHtml(JSON.stringify(d))})'>Verifikasi</button>`
         : '';
 
-      const infaqAmt = getInfaq(d.animalType);
-      const infaqBadge = d.infaqPaid
+      // Waiver semantic: infaq_amount IS NULL = di-skip dari obligation
+      // (mis. bawa sendiri + potongan daging, institutional). Source of
+      // truth column, bukan default catalog.
+      const infaqWaived = d.infaqAmount === null;
+      const infaqAmt = infaqWaived
+        ? 0
+        : (d.infaqAmount != null ? Number(d.infaqAmount) : getInfaq(d.animalType));
+      const infaqAmountHtml = infaqWaived
+        ? `<span class="text-xs text-white/30" title="Infaq di-waive (bawa sendiri / institutional)">—</span>`
+        : `<span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>`;
+      const infaqBadge = infaqWaived
+        ? `<span class="badge badge-rejected" title="Waiver — di-skip dari rekap sumbangan">Waived</span>`
+        : d.infaqPaid
         ? `<span class="badge badge-active" title="Lunas ${d.infaqPaidAt ? new Date(d.infaqPaidAt).toLocaleDateString('id-ID') : ''}">✓ Lunas</span>`
         : `<span class="badge badge-pending">Belum</span>`;
-      const infaqBtn = `<button class="btn-secondary btn-sm" onclick="toggleInfaq('${d.id}', ${!d.infaqPaid})">${d.infaqPaid ? 'Batalkan' : 'Tandai Lunas'}</button>`;
+      const infaqBtn = infaqWaived
+        ? ''
+        : `<button class="btn-secondary btn-sm" onclick="toggleInfaq('${d.id}', ${!d.infaqPaid})">${d.infaqPaid ? 'Batalkan' : 'Tandai Lunas'}</button>`;
 
       // Phone shown under name. Yellow indicator kalau missing — biar gampang
       // di-spot pas reconcile.
@@ -315,7 +333,7 @@
         <td>${proofHtml}</td>
         <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
         <td><div class="flex flex-col gap-1 items-start">
-          <span class="text-xs text-white/60">Rp ${infaqAmt.toLocaleString('id-ID')}</span>
+          ${infaqAmountHtml}
           ${infaqBadge}
         </div></td>
         ${d.konfirmasi_teknis_submitted_at
