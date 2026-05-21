@@ -169,7 +169,7 @@
 
           const canVerify = d.status === 'PENDING_VERIFICATION';
           const verifyBtn = canVerify
-            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${JSON.stringify(d)})'>Verifikasi</button>`
+            ? `<button class="btn-primary btn-sm" onclick='openVerifyModal(${escHtml(JSON.stringify(d))})'>Verifikasi</button>`
             : '';
 
           return `<tr>
@@ -191,7 +191,7 @@
     }
 
     function escHtml(str) {
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
     function formatDate(iso) {
