@@ -37,6 +37,16 @@
         </select>
       </div>
       <div class="flex gap-2">
+        <div class="col-config-wrap">
+          <button class="btn-secondary" id="col-config-btn" onclick="toggleColumnConfig(event)">⚙ Kolom</button>
+          <div class="col-config-popover" id="col-config-popover" hidden>
+            <h4>Tampilkan Kolom</h4>
+            <div id="col-config-items"></div>
+            <div class="col-config-popover-footer">
+              <button class="btn-secondary btn-sm" onclick="resetColumnConfig()" style="width:100%">Reset default</button>
+            </div>
+          </div>
+        </div>
         <button class="btn-secondary" onclick="openRekapModal()">📋 Rekap WA</button>
         <button class="btn-secondary" onclick="exportCsv()">📥 Export CSV</button>
         <button class="btn-primary" onclick="openModal()">
@@ -51,21 +61,21 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>No. Reg</th>
-              <th>Nama Pendaftar</th>
-              <th>Atas Nama Qurban</th>
-              <th>Jenis Hewan</th>
-              <th>Perkiraan Total</th>
-              <th>Alamat</th>
-              <th>Bukti</th>
-              <th>Status</th>
-              <th>Infaq</th>
-              <th>Konfirmasi</th>
-              <th>Aksi</th>
+              <th data-col="regNo">No. Reg</th>
+              <th data-col="pendaftar">Nama Pendaftar</th>
+              <th data-col="atasNama">Atas Nama Qurban</th>
+              <th data-col="jenisHewan">Jenis Hewan</th>
+              <th data-col="perkiraanTotal">Perkiraan Total</th>
+              <th data-col="alamat">Alamat</th>
+              <th data-col="bukti">Bukti</th>
+              <th data-col="status">Status</th>
+              <th data-col="infaq">Infaq</th>
+              <th data-col="konfirmasi">Konfirmasi</th>
+              <th data-col="aksi">Aksi</th>
             </tr>
           </thead>
           <tbody id="data-table">
-            <tr><td colspan="11" class="text-center py-8"><div class="spinner"></div></td></tr>
+            <tr><td colspan="99" class="text-center py-8"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -252,6 +262,92 @@
       REJECTED: 'badge-rejected',
     };
 
+    const COLUMN_DEFS_PENGKURBAN = [
+      { id: 'regNo', label: 'No. Reg' },
+      { id: 'pendaftar', label: 'Nama Pendaftar' },
+      { id: 'atasNama', label: 'Atas Nama Qurban' },
+      { id: 'jenisHewan', label: 'Jenis Hewan' },
+      { id: 'perkiraanTotal', label: 'Perkiraan Total' },
+      { id: 'alamat', label: 'Alamat' },
+      { id: 'bukti', label: 'Bukti' },
+      { id: 'status', label: 'Status' },
+      { id: 'infaq', label: 'Infaq' },
+      { id: 'konfirmasi', label: 'Konfirmasi' },
+      { id: 'aksi', label: 'Aksi' },
+    ];
+    const COLUMN_DEFAULTS_PENGKURBAN = COLUMN_DEFS_PENGKURBAN.map(c => c.id);
+
+    function applyColumnVisibilityPengkurban() {
+      const visible = getColumnPrefs('pengkurban', COLUMN_DEFAULTS_PENGKURBAN);
+      COLUMN_DEFS_PENGKURBAN.forEach(({ id }) => {
+        const hidden = !visible.includes(id);
+        document.querySelectorAll(`.data-table [data-col="${id}"]`)
+          .forEach(el => el.classList.toggle('col-hidden', hidden));
+      });
+    }
+
+    function renderColumnConfigItems() {
+      const visible = getColumnPrefs('pengkurban', COLUMN_DEFAULTS_PENGKURBAN);
+      const container = document.getElementById('col-config-items');
+      container.innerHTML = COLUMN_DEFS_PENGKURBAN.map(({ id, label }) => `
+        <label>
+          <input type="checkbox" data-col-id="${id}" ${visible.includes(id) ? 'checked' : ''}>
+          <span>${label}</span>
+        </label>
+      `).join('');
+      container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.addEventListener('change', onColumnToggle);
+      });
+    }
+
+    function onColumnToggle(ev) {
+      const input = ev.target;
+      const allInputs = document.querySelectorAll('#col-config-items input[type="checkbox"]');
+      const checkedCount = Array.from(allInputs).filter(i => i.checked).length;
+      if (checkedCount === 0) {
+        input.checked = true;
+        showToast('Minimal 1 kolom harus ditampilkan.', 'error');
+        return;
+      }
+      const visible = Array.from(allInputs)
+        .filter(i => i.checked)
+        .map(i => i.dataset.colId);
+      const ordered = COLUMN_DEFAULTS_PENGKURBAN.filter(id => visible.includes(id));
+      setColumnPrefs('pengkurban', ordered);
+      applyColumnVisibilityPengkurban();
+    }
+
+    function toggleColumnConfig(ev) {
+      ev.stopPropagation();
+      const popover = document.getElementById('col-config-popover');
+      const wasHidden = popover.hasAttribute('hidden');
+      if (wasHidden) {
+        renderColumnConfigItems();
+        popover.removeAttribute('hidden');
+        setTimeout(() => {
+          document.addEventListener('click', closeColumnConfigOnOutsideClick, { once: true });
+        }, 0);
+      } else {
+        popover.setAttribute('hidden', '');
+      }
+    }
+
+    function closeColumnConfigOnOutsideClick(ev) {
+      const popover = document.getElementById('col-config-popover');
+      const wrap = popover?.parentElement;
+      if (popover && !popover.hasAttribute('hidden') && wrap && !wrap.contains(ev.target)) {
+        popover.setAttribute('hidden', '');
+      } else if (popover && !popover.hasAttribute('hidden')) {
+        document.addEventListener('click', closeColumnConfigOnOutsideClick, { once: true });
+      }
+    }
+
+    function resetColumnConfig() {
+      setColumnPrefs('pengkurban', COLUMN_DEFAULTS_PENGKURBAN);
+      renderColumnConfigItems();
+      applyColumnVisibilityPengkurban();
+    }
+
     function escHtml(str) {
       return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
@@ -260,6 +356,7 @@
     const urlStatus = new URLSearchParams(location.search).get('status');
     if (urlStatus) document.getElementById('status-filter').value = urlStatus;
 
+    applyColumnVisibilityPengkurban();
     Promise.all([loadPricingCatalog(), loadEventOptions('event-filter', true)])
       .then(() => loadData());
     loadEventOptions('form-event');
@@ -324,22 +421,22 @@
         : `<div class="text-xs text-yellow-400/80" title="No. HP belum diisi">📱 belum diisi</div>`;
 
       return `<tr>
-        <td class="text-xs font-mono text-emerald-300/70">${escHtml(d.registrationNumber || '—')}</td>
-        <td><div class="font-semibold">${escHtml(d.name)}</div>${phoneHtml}</td>
-        <td class="text-xs text-white/70">${escHtml(d.shohibulName || '—')}</td>
-        <td>${escHtml(animalLabels[d.animalType] || d.animalType)}</td>
-        <td class="text-xs text-white/70">${computeExpectedTotal(d)}</td>
-        <td>${missing(d.address, '📍')}</td>
-        <td>${proofHtml}</td>
-        <td><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
-        <td><div class="flex flex-col gap-1 items-start">
+        <td data-col="regNo" class="text-xs font-mono text-emerald-300/70">${escHtml(d.registrationNumber || '—')}</td>
+        <td data-col="pendaftar"><div class="font-semibold">${escHtml(d.name)}</div>${phoneHtml}</td>
+        <td data-col="atasNama" class="text-xs text-white/70">${escHtml(d.shohibulName || '—')}</td>
+        <td data-col="jenisHewan">${escHtml(animalLabels[d.animalType] || d.animalType)}</td>
+        <td data-col="perkiraanTotal" class="text-xs text-white/70">${computeExpectedTotal(d)}</td>
+        <td data-col="alamat">${missing(d.address, '📍')}</td>
+        <td data-col="bukti">${proofHtml}</td>
+        <td data-col="status"><span class="badge ${statusBadge[d.status] || ''}">${statusLabels[d.status] || d.status}</span></td>
+        <td data-col="infaq"><div class="flex flex-col gap-1 items-start">
           ${infaqAmountHtml}
           ${infaqBadge}
         </div></td>
         ${d.konfirmasi_teknis_submitted_at
-          ? `<td class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><button class="text-green-400 hover:text-green-300 cursor-pointer" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>✓</button></td>`
-          : `<td class="text-center"><button class="text-white/30 hover:text-yellow-400/70 cursor-pointer text-xs" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>—</button></td>`}
-        <td><div class="flex gap-2 flex-wrap">
+          ? `<td data-col="konfirmasi" class="text-center" title="Submitted: ${new Date(d.konfirmasi_teknis_submitted_at).toLocaleString('id-ID')}"><button class="text-green-400 hover:text-green-300 cursor-pointer" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>✓</button></td>`
+          : `<td data-col="konfirmasi" class="text-center"><button class="text-white/30 hover:text-yellow-400/70 cursor-pointer text-xs" onclick='openKonfirmasiModal(${escHtml(JSON.stringify(d.id))}, ${escHtml(JSON.stringify(d.name))})'>—</button></td>`}
+        <td data-col="aksi"><div class="flex gap-2 flex-wrap">
           ${verifyBtn}
           ${infaqBtn}
           <button class="btn-secondary btn-sm" onclick='editData(${escHtml(JSON.stringify(d))})'>Edit</button>
@@ -350,7 +447,7 @@
 
     function renderGroupHeader(label, count) {
       return `<tr class="bg-emerald-900/40">
-        <td colspan="11" class="font-semibold text-emerald-200 py-2 px-3">
+        <td colspan="99" class="font-semibold text-emerald-200 py-2 px-3">
           ${label}
           <span class="text-emerald-400/60 text-xs ml-2">(${count} orang)</span>
         </td>
@@ -372,7 +469,7 @@
 
         const tbody = document.getElementById('data-table');
         if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="11" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="99" class="text-center py-8 text-emerald-300/40">Belum ada data pengkurban</td></tr>';
           return;
         }
 
@@ -401,6 +498,7 @@
         }
 
         tbody.innerHTML = html.join('');
+        applyColumnVisibilityPengkurban();
       } catch (err) { showToast('Gagal memuat data', 'error'); }
     }
 

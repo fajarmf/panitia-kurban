@@ -35,6 +35,52 @@ function clearAuth() {
   localStorage.removeItem('user');
 }
 
+// ===== User preferences (localStorage) =====
+function _prefsKey() {
+  const user = getUser();
+  return user ? `prefs:${user.id}` : null;
+}
+
+function getPrefs() {
+  try {
+    const key = _prefsKey();
+    if (!key) return {};
+    return JSON.parse(localStorage.getItem(key)) || {};
+  } catch (e) {
+    console.error('[prefs] parse failed', e.message);
+    return {};
+  }
+}
+
+function setPrefs(patch) {
+  try {
+    const key = _prefsKey();
+    if (!key) return;
+    const current = getPrefs();
+    const next = { ...current, ...patch };
+    localStorage.setItem(key, JSON.stringify(next));
+  } catch (e) {
+    console.error('[prefs] write failed', e.message);
+  }
+}
+
+function getColumnPrefs(page, defaults) {
+  const prefs = getPrefs();
+  const stored = prefs.columns && prefs.columns[page];
+  if (!Array.isArray(stored) || stored.length === 0) return defaults;
+  // Defensive: drop unknown columns (defaults may have shrunk).
+  // Note: NOT merging with defaults — stored is the source of truth for
+  // what user wants visible. Merging would re-add columns user explicitly hid.
+  // New columns added later can be surfaced via "Reset default".
+  const known = stored.filter(id => defaults.includes(id));
+  return known.length > 0 ? known : defaults;
+}
+
+function setColumnPrefs(page, visibleIds) {
+  const prefs = getPrefs();
+  setPrefs({ columns: { ...(prefs.columns || {}), [page]: visibleIds } });
+}
+
 function requireAuth() {
   if (!getToken()) {
     window.location.href = '/login.html';
@@ -121,13 +167,32 @@ function initSidebar(activePage) {
   // Desktop sidebar
   const sidebar = document.getElementById('sidebar');
   if (sidebar) {
+    // Restore collapsed state BEFORE rendering (no flash).
+    const prefs = getPrefs();
+    if (prefs.sidebarCollapsed) {
+      sidebar.classList.add('collapsed');
+      document.body.classList.add('sidebar-collapsed');
+    }
+
+    // Inject toggle button into sidebar-logo (one-time).
+    const logoEl = sidebar.querySelector('.sidebar-logo');
+    if (logoEl && !logoEl.querySelector('.sidebar-toggle')) {
+      const btn = document.createElement('button');
+      btn.className = 'sidebar-toggle';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Toggle sidebar');
+      btn.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>`;
+      btn.onclick = toggleSidebarCollapse;
+      logoEl.appendChild(btn);
+    }
+
     const nav = sidebar.querySelector('.sidebar-nav');
     nav.innerHTML = navItems
       .filter(item => item.roles.includes(user.role))
       .map(item => `
         <a href="${item.href}" class="${activePage === item.id ? 'active' : ''}" id="nav-${item.id}">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${item.icon}"/></svg>
-          ${item.label}
+          <span class="nav-label">${item.label}</span>
         </a>
       `).join('');
 
@@ -135,7 +200,7 @@ function initSidebar(activePage) {
     nav.innerHTML += `
       <a href="#" onclick="logout()" style="margin-top: auto; color: #fca5a5;">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        Logout
+        <span class="nav-label">Logout</span>
       </a>
     `;
   }
@@ -185,6 +250,15 @@ function logout() {
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   sidebar.classList.toggle('mobile-open');
+}
+
+// ===== Desktop sidebar collapse =====
+function toggleSidebarCollapse() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  const collapsed = sidebar.classList.toggle('collapsed');
+  document.body.classList.toggle('sidebar-collapsed', collapsed);
+  setPrefs({ sidebarCollapsed: collapsed });
 }
 
 // ===== Format date =====
